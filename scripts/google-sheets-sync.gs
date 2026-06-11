@@ -117,27 +117,48 @@ function syncMacros_(token) {
 
 // ---------------------------------------------------------------------------
 
+function getProp_(name) {
+  const value = PropertiesService.getScriptProperties().getProperty(name);
+  if (!value || !value.trim()) {
+    throw new Error('Skript-Eigenschaft "' + name + '" fehlt oder ist leer. ' +
+      'Projekteinstellungen (Zahnrad) → Skript-Eigenschaften prüfen.');
+  }
+  return value.trim();
+}
+
+/** Testet nur den Login und zeigt die Antwort des Servers. Zum Debuggen ausführen. */
+function testLogin() {
+  const token = getToken_();
+  Logger.log('Login erfolgreich! Token beginnt mit: ' + token.slice(0, 12) + '…');
+}
+
 function getToken_() {
-  const props = PropertiesService.getScriptProperties();
-  const response = UrlFetchApp.fetch(props.getProperty('SUPABASE_URL') + '/auth/v1/token?grant_type=password', {
+  const email = getProp_('SUPABASE_EMAIL');
+  const response = UrlFetchApp.fetch(getProp_('SUPABASE_URL') + '/auth/v1/token?grant_type=password', {
     method: 'post',
     contentType: 'application/json',
-    headers: { apikey: props.getProperty('SUPABASE_ANON_KEY') },
+    headers: { apikey: getProp_('SUPABASE_ANON_KEY') },
     payload: JSON.stringify({
-      email: props.getProperty('SUPABASE_EMAIL'),
-      password: props.getProperty('SUPABASE_PASSWORD'),
+      email: email,
+      password: getProp_('SUPABASE_PASSWORD'),
     }),
+    muteHttpExceptions: true,
   });
-  const token = JSON.parse(response.getContentText()).access_token;
-  if (!token) throw new Error('Supabase-Login fehlgeschlagen. Skript-Eigenschaften prüfen.');
-  return token;
+  const body = JSON.parse(response.getContentText());
+  if (!body.access_token) {
+    throw new Error(
+      'Supabase-Login fehlgeschlagen für "' + email + '" (HTTP ' + response.getResponseCode() + '): ' +
+        (body.msg || body.error_description || response.getContentText()) +
+        ' — E-Mail/Passwort in den Skript-Eigenschaften prüfen.',
+    );
+  }
+  return body.access_token;
 }
 
 function fetchRows_(token, pathAndQuery) {
-  const props = PropertiesService.getScriptProperties();
-  const response = UrlFetchApp.fetch(props.getProperty('SUPABASE_URL') + '/rest/v1/' + pathAndQuery, {
+  const response = UrlFetchApp.fetch(getProp_('SUPABASE_URL') + '/rest/v1/' + pathAndQuery, {
     headers: {
-      apikey: props.getProperty('SUPABASE_ANON_KEY'),
+      apikey: getProp_('SUPABASE_ANON_KEY'),
       Authorization: 'Bearer ' + token,
     },
   });
