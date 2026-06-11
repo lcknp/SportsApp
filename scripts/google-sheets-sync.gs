@@ -16,7 +16,25 @@
  *      SUPABASE_PASSWORD  = <Login-Passwort>
  * 4. Im Editor die Funktion "syncAll" auswählen → Ausführen → Berechtigungen bestätigen
  * 5. Für automatischen täglichen Sync einmal "createDailyTrigger" ausführen
+ *
+ * Zusätzlich befüllt syncAll das persönliche Tracker-Blatt (Spalten siehe
+ * TRACKER-Konfiguration unten): Es sucht die Zeile mit dem passenden Datum
+ * in Spalte B und trägt Gewicht, Makros, Training und Läufe ein.
+ * Es werden NUR LEERE ZELLEN befüllt — von Hand eingetragene Werte und
+ * Formeln (z.B. CALORIES) werden nie überschrieben.
  */
+
+// Konfiguration für das eigene Tracker-Blatt:
+const TRACKER = {
+  sheetName: null, // null = erstes Blatt der Tabelle; sonst z.B. 'Tabelle1'
+  dateColumn: 2, // B  = DATE (Format TT.MM.JJJJ)
+  weightColumn: 3, // C  = WEIGHT
+  proteinColumn: 6, // F  = PROTEIN
+  carbsColumn: 7, // G  = CARBS
+  fatsColumn: 8, // H  = FATS
+  sessionColumn: 16, // P  = SESSION
+  notesColumn: 18, // R  = NOTES (Läufe werden hier eingetragen)
+};
 
 function syncAll() {
   const token = getToken_();
@@ -25,6 +43,7 @@ function syncAll() {
   syncRuns_(token);
   syncWeights_(token);
   syncMacros_(token);
+  syncTracker_(token);
 }
 
 /** Täglichen Auto-Sync (ca. 3–4 Uhr nachts) einrichten. Nur einmal ausführen. */
@@ -113,6 +132,96 @@ function syncMacros_(token) {
     return [entry.date, entry.protein_g, entry.carbs_g, entry.fat_g, kcal];
   });
   writeSheet_('Makros', ['Datum', 'Protein (g)', 'Kohlenhydrate (g)', 'Fett (g)', 'kcal'], rows);
+}
+
+// ---------------------------------------------------------------------------
+
+/**
+ * Befüllt das persönliche Tracker-Blatt: sucht pro Datum die Zeile
+ * (Datum in Spalte B als TT.MM.JJJJ) und trägt App-Daten in die
+ * konfigurierten Spalten ein. Nur leere Zellen werden beschrieben.
+ */
+function syncTracker_(token) {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = TRACKER.sheetName
+    ? spreadsheet.getSheetByName(TRACKER.sheetName)
+    : spreadsheet.getSheets()[0];
+  if (!sheet) throw new Error('Tracker-Blatt "' + TRACKER.sheetName + '" nicht gefunden.');
+
+  // Datums-Zeilen einlesen: "TT.MM.JJJJ" -> Zeilennummer
+  const lastRow = sheet.getLastRow();
+  const dateValues = sheet.getRange(1, TRACKER.dateColumn, lastRow, 1).getDisplayValues();
+  const rowByDate = {};
+  for (let i = 0; i < dateValues.length; i++) {
+    const text = String(dateValues[i][0]).trim();
+    if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(text)) {
+      const parts = text.split('.');
+      rowByDate[pad2_(parts[0]) + '.' + pad2_(parts[1]) + '.' + parts[2]] = i + 1;
+    }
+  }
+
+  let written = 0;
+  const missingDates = [];
+
+  function writeIfEmpty(isoDate, column, value) {
+    if (value === null || value === undefined || value === '' || value === 0) return;
+    const key = isoToGerman_(isoDate);
+    const row = rowByDate[key];
+    if (!row) {
+      if (missingDates.indexOf(key) === -1) missingDates.push(key);
+      return;
+    }
+    const cell = sheet.getRange(row, column);
+    const existing = cell.getValue();
+    if (existing === '' || existing === null) {
+      cell.setValue(value);
+      written++;
+    }
+  }
+
+  fetchRows_(token, 'weights?select=date,weight_kg&order=date.asc').forEach(function (weight) {
+    writeIfEmpty(weight.date, TRACKER.weightColumn, weight.weight_kg);
+  });
+
+  fetchRows_(token, 'daily_macros?select=date,protein_g,carbs_g,fat_g&order=date.asc').forEach(function (entry) {
+    writeIfEmpty(entry.date, TRACKER.proteinColumn, entry.protein_g);
+    writeIfEmpty(entry.date, TRACKER.carbsColumn, entry.carbs_g);
+    writeIfEmpty(entry.date, TRACKER.fatsColumn, entry.fat_g);
+  });
+
+  // Trainingsname(n) des Tages in die SESSION-Spalte
+  const sessionsByDate = {};
+  fetchRows_(token, 'workout_sessions?select=date,name&name=neq.Lauf&order=date.asc').forEach(function (session) {
+    sessionsByDate[session.date] = sessionsByDate[session.date]
+      ? sessionsByDate[session.date] + ' + ' + session.name
+      : session.name;
+  });
+  Object.keys(sessionsByDate).forEach(function (isoDate) {
+    writeIfEmpty(isoDate, TRACKER.sessionColumn, sessionsByDate[isoDate]);
+  });
+
+  // Läufe als Notiz
+  fetchRows_(token, 'runs?select=date,distance_km,duration_minutes&order=date.asc').forEach(function (run) {
+    writeIfEmpty(
+      run.date,
+      TRACKER.notesColumn,
+      'Lauf: ' + run.distance_km + ' km in ' + run.duration_minutes + ' min',
+    );
+  });
+
+  Logger.log(
+    'Tracker-Blatt "' + sheet.getName() + '": ' + written + ' Zellen befüllt.' +
+      (missingDates.length ? ' Keine Zeile gefunden für: ' + missingDates.join(', ') : ''),
+  );
+}
+
+function pad2_(value) {
+  return String(value).length === 1 ? '0' + value : String(value);
+}
+
+function isoToGerman_(iso) {
+  const parts = iso.split('-');
+  return parts[2] + '.' + parts[1] + '.' + parts[0];
 }
 
 // ---------------------------------------------------------------------------
