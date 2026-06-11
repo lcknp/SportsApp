@@ -1,10 +1,13 @@
 /**
  * SportsApp → Google Sheets Sync
  *
- * Liest alle Daten (Trainings, Läufe, Gewicht, Makros) aus Supabase und
- * schreibt sie in die Blätter "Trainings", "Läufe", "Gewicht", "Makros"
- * der Google-Tabelle, an die dieses Skript gebunden ist. Bestehende
- * andere Blätter werden nicht angefasst.
+ * Liest die Daten (Gewicht, Makros, Trainings, Läufe) aus Supabase und
+ * trägt sie direkt in das persönliche Tracker-Blatt ("YOUR DATA") ein:
+ * Es sucht die Zeile mit dem passenden Datum in Spalte B und schreibt
+ * die Werte in die konfigurierten Spalten (siehe TRACKER unten).
+ *
+ * Es werden NUR LEERE ZELLEN befüllt — von Hand eingetragene Werte und
+ * Formeln (z.B. CALORIES) werden nie überschrieben.
  *
  * Einrichtung (einmalig):
  * 1. Google-Tabelle öffnen → Erweiterungen → Apps Script
@@ -17,14 +20,11 @@
  * 4. Im Editor die Funktion "syncAll" auswählen → Ausführen → Berechtigungen bestätigen
  * 5. Für automatischen täglichen Sync einmal "createDailyTrigger" ausführen
  *
- * Zusätzlich befüllt syncAll das persönliche Tracker-Blatt (Spalten siehe
- * TRACKER-Konfiguration unten): Es sucht die Zeile mit dem passenden Datum
- * in Spalte B und trägt Gewicht, Makros, Training und Läufe ein.
- * Es werden NUR LEERE ZELLEN befüllt — von Hand eingetragene Werte und
- * Formeln (z.B. CALORIES) werden nie überschrieben.
+ * Aufräumen: "deleteBackupSheets" einmal ausführen, um die früher angelegten
+ * Blätter "Trainings", "Läufe", "Gewicht", "Makros" zu entfernen.
  */
 
-// Konfiguration für das eigene Tracker-Blatt:
+// Konfiguration für das Tracker-Blatt:
 const TRACKER = {
   sheetName: 'YOUR DATA', // Name des Tab-Blatts mit deiner Tracking-Liste
   dateColumn: 2, // B  = DATE (Format TT.MM.JJJJ)
@@ -38,11 +38,6 @@ const TRACKER = {
 
 function syncAll() {
   const token = getToken_();
-
-  syncTrainings_(token);
-  syncRuns_(token);
-  syncWeights_(token);
-  syncMacros_(token);
   syncTracker_(token);
 }
 
@@ -54,92 +49,21 @@ function createDailyTrigger() {
   ScriptApp.newTrigger('syncAll').timeBased().everyDays(1).atHour(3).create();
 }
 
-// ---------------------------------------------------------------------------
-
-function syncTrainings_(token) {
-  const sessions = fetchRows_(
-    token,
-    'workout_sessions?select=date,name,duration_minutes,session_exercises(order_index,sets,reps,weight_kg,set_entries,exercise:exercises(name,category))' +
-      '&name=neq.Lauf&order=date.asc',
-  );
-
-  const rows = [];
-  sessions.forEach(function (session) {
-    const exercises = (session.session_exercises || []).sort(function (a, b) {
-      return a.order_index - b.order_index;
-    });
-    exercises.forEach(function (sessionExercise) {
-      const exerciseName = sessionExercise.exercise ? sessionExercise.exercise.name : '';
-      const category = sessionExercise.exercise ? sessionExercise.exercise.category : '';
-      const sets = sessionExercise.set_entries || [];
-      if (sets.length > 0) {
-        sets.forEach(function (set, index) {
-          rows.push([
-            session.date,
-            session.name,
-            session.duration_minutes,
-            exerciseName,
-            category,
-            index + 1,
-            set.weight_kg,
-            set.reps,
-          ]);
-        });
-      } else {
-        // Alte Einträge ohne einzelne Sätze
-        rows.push([
-          session.date,
-          session.name,
-          session.duration_minutes,
-          exerciseName,
-          category,
-          '',
-          sessionExercise.weight_kg,
-          sessionExercise.sets + ' x ' + sessionExercise.reps,
-        ]);
-      }
-    });
-    if (exercises.length === 0) {
-      rows.push([session.date, session.name, session.duration_minutes, '', '', '', '', '']);
-    }
+/** Entfernt die früher angelegten Backup-Blätter. Nur einmal ausführen. */
+function deleteBackupSheets() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  ['Trainings', 'Läufe', 'Gewicht', 'Makros'].forEach(function (name) {
+    const sheet = spreadsheet.getSheetByName(name);
+    if (sheet) spreadsheet.deleteSheet(sheet);
   });
-
-  writeSheet_('Trainings', ['Datum', 'Training', 'Dauer (min)', 'Übung', 'Kategorie', 'Satz', 'kg', 'Wdh.'], rows);
-}
-
-function syncRuns_(token) {
-  const runs = fetchRows_(token, 'runs?select=date,distance_km,duration_minutes&order=date.asc');
-  const rows = runs.map(function (run) {
-    const pace =
-      run.distance_km > 0 ? Math.round((run.duration_minutes / run.distance_km) * 100) / 100 : '';
-    return [run.date, run.distance_km, run.duration_minutes, pace];
-  });
-  writeSheet_('Läufe', ['Datum', 'Distanz (km)', 'Dauer (min)', 'Pace (min/km)'], rows);
-}
-
-function syncWeights_(token) {
-  const weights = fetchRows_(token, 'weights?select=date,weight_kg&order=date.asc');
-  const rows = weights.map(function (weight) {
-    return [weight.date, weight.weight_kg];
-  });
-  writeSheet_('Gewicht', ['Datum', 'Gewicht (kg)'], rows);
-}
-
-function syncMacros_(token) {
-  const macros = fetchRows_(token, 'daily_macros?select=date,protein_g,carbs_g,fat_g&order=date.asc');
-  const rows = macros.map(function (entry) {
-    const kcal = Math.round(entry.protein_g * 4 + entry.carbs_g * 4 + entry.fat_g * 9);
-    return [entry.date, entry.protein_g, entry.carbs_g, entry.fat_g, kcal];
-  });
-  writeSheet_('Makros', ['Datum', 'Protein (g)', 'Kohlenhydrate (g)', 'Fett (g)', 'kcal'], rows);
 }
 
 // ---------------------------------------------------------------------------
 
 /**
- * Befüllt das persönliche Tracker-Blatt: sucht pro Datum die Zeile
- * (Datum in Spalte B als TT.MM.JJJJ) und trägt App-Daten in die
- * konfigurierten Spalten ein. Nur leere Zellen werden beschrieben.
+ * Befüllt das Tracker-Blatt: sucht pro Datum die Zeile (Datum in Spalte B
+ * als TT.MM.JJJJ) und trägt App-Daten in die konfigurierten Spalten ein.
+ * Nur leere Zellen werden beschrieben.
  */
 function syncTracker_(token) {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
@@ -272,15 +196,4 @@ function fetchRows_(token, pathAndQuery) {
     },
   });
   return JSON.parse(response.getContentText());
-}
-
-function writeSheet_(name, header, rows) {
-  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  let sheet = spreadsheet.getSheetByName(name);
-  if (!sheet) sheet = spreadsheet.insertSheet(name);
-  sheet.clearContents();
-  sheet.getRange(1, 1, 1, header.length).setValues([header]);
-  if (rows.length > 0) {
-    sheet.getRange(2, 1, rows.length, header.length).setValues(rows);
-  }
 }
