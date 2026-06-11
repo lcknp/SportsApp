@@ -17,7 +17,11 @@ function RootNavigator() {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
           name="new-training"
-          options={{ presentation: 'modal', headerShown: true, title: 'Training eintragen' }}
+          options={{ presentation: 'modal', headerShown: true, title: 'Aktives Training' }}
+        />
+        <Stack.Screen
+          name="new-plan"
+          options={{ presentation: 'modal', headerShown: true, title: 'Training erstellen' }}
         />
         <Stack.Screen
           name="new-run"

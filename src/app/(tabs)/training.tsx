@@ -17,8 +17,9 @@ export default function TrainingScreen() {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { sessions, deleteSession, updateSession, refresh } = useTrainingSessions();
-  const { plans, refresh: refreshPlans } = useTrainingPlans();
+  const { plans, deletePlan, refresh: refreshPlans } = useTrainingPlans();
 
+  const [isChoosingPlan, setIsChoosingPlan] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDate, setEditDate] = useState(new Date());
   const [editDuration, setEditDuration] = useState('');
@@ -51,37 +52,63 @@ export default function TrainingScreen() {
       <ThemedView style={styles.container}>
         <ThemedView style={styles.header}>
           <ThemedText type="subtitle">Training</ThemedText>
+        </ThemedView>
+
+        <ThemedView style={styles.actionRow}>
           <Pressable
-            style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
-            onPress={() => router.push('/new-training')}>
-            <ThemedView type="accent" style={styles.addButtonInner}>
+            style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
+            onPress={() => setIsChoosingPlan((current) => !current)}>
+            <ThemedView type="accent" style={styles.actionButtonInner}>
               <ThemedText type="smallBold" themeColor="accentText">
-                + Training
+                ▶ Training starten
               </ThemedText>
+            </ThemedView>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
+            onPress={() => router.push('/new-plan')}>
+            <ThemedView type="backgroundElement" style={styles.actionButtonInner}>
+              <ThemedText type="smallBold">+ Training erstellen</ThemedText>
             </ThemedView>
           </Pressable>
         </ThemedView>
 
-        {plans.length > 0 && (
+        {isChoosingPlan && (
           <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="smallBold">Trainingspläne</ThemedText>
-            <ThemedView style={styles.chipRow}>
-              {plans.map((plan) => (
-                <Pressable
-                  key={plan.id}
-                  style={({ pressed }) => pressed && styles.pressed}
-                  onPress={() => router.push(`/new-training?planId=${plan.id}&autostart=1`)}>
-                  <ThemedView type="accent" style={styles.planChip}>
-                    <ThemedText type="small" themeColor="accentText">
-                      {plan.name}
+            <ThemedText type="smallBold">Einheit auswählen</ThemedText>
+            {plans.length === 0 ? (
+              <ThemedText type="small" themeColor="textSecondary">
+                Noch keine Einheiten vorhanden. Erstelle zuerst eine über „+ Training erstellen".
+              </ThemedText>
+            ) : (
+              plans.map((plan) => (
+                <ThemedView key={plan.id} style={styles.planRow}>
+                  <Pressable
+                    style={({ pressed }) => [styles.planStart, pressed && styles.pressed]}
+                    onPress={() => {
+                      setIsChoosingPlan(false);
+                      router.push(`/new-training?planId=${plan.id}`);
+                    }}>
+                    <ThemedView type="accent" style={styles.planChip}>
+                      <ThemedText type="smallBold" themeColor="accentText">
+                        {plan.name}
+                      </ThemedText>
+                      <ThemedText type="small" themeColor="accentText">
+                        {plan.training_plan_exercises.length}{' '}
+                        {plan.training_plan_exercises.length === 1 ? 'Übung' : 'Übungen'} · starten
+                      </ThemedText>
+                    </ThemedView>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => pressed && styles.pressed}
+                    onPress={() => deletePlan(plan.id)}>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Löschen
                     </ThemedText>
-                    <ThemedText type="small" themeColor="accentText">
-                      Training starten
-                    </ThemedText>
-                  </ThemedView>
-                </Pressable>
-              ))}
-            </ThemedView>
+                  </Pressable>
+                </ThemedView>
+              ))
+            )}
           </ThemedView>
         )}
 
@@ -200,12 +227,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  addButton: {
+  actionRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  actionButton: {
+    flex: 1,
     borderRadius: Spacing.three,
   },
-  addButtonInner: {
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+  actionButtonInner: {
+    alignItems: 'center',
+    paddingVertical: Spacing.three,
+    borderRadius: Spacing.three,
+  },
+  planRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+  },
+  planStart: {
+    flex: 1,
     borderRadius: Spacing.three,
   },
   card: {
@@ -221,11 +262,6 @@ const styles = StyleSheet.create({
   cardHeaderActions: {
     flexDirection: 'row',
     gap: Spacing.three,
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.two,
   },
   planChip: {
     paddingHorizontal: Spacing.three,
