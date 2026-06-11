@@ -16,7 +16,7 @@ type ExercisePickerProps = {
 
 export function ExercisePicker({ onSelect }: ExercisePickerProps) {
   const theme = useTheme();
-  const { exercises, addExercise } = useExercises();
+  const { exercises, addExercise, deleteExercise } = useExercises();
 
   const [categoryFilter, setCategoryFilter] = useState<ExerciseCategory | null>(null);
   const [showNewExerciseForm, setShowNewExerciseForm] = useState(false);
@@ -24,6 +24,8 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
   const [newExerciseCategory, setNewExerciseCategory] = useState<ExerciseCategory>(
     EXERCISE_CATEGORIES[0],
   );
+  const [isManaging, setIsManaging] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const filteredExercises = useMemo(
@@ -31,6 +33,21 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
       categoryFilter ? exercises.filter((exercise) => exercise.category === categoryFilter) : exercises,
     [exercises, categoryFilter],
   );
+
+  async function handleChipPress(exercise: Exercise) {
+    if (!isManaging) {
+      onSelect(exercise);
+      return;
+    }
+    if (pendingDeleteId !== exercise.id) {
+      setPendingDeleteId(exercise.id);
+      return;
+    }
+    setError(null);
+    const message = await deleteExercise(exercise.id);
+    setPendingDeleteId(null);
+    if (message) setError(message);
+  }
 
   async function handleCreateExercise() {
     if (!newExerciseName.trim()) return;
@@ -77,9 +94,15 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
           <Pressable
             key={exercise.id}
             style={({ pressed }) => pressed && styles.pressed}
-            onPress={() => onSelect(exercise)}>
+            onPress={() => handleChipPress(exercise)}>
             <ThemedView type="background" style={styles.chip}>
-              <ThemedText type="small">{exercise.name}</ThemedText>
+              <ThemedText type="small" style={isManaging && pendingDeleteId === exercise.id ? styles.deleteText : undefined}>
+                {isManaging
+                  ? pendingDeleteId === exercise.id
+                    ? `Wirklich löschen: ${exercise.name}?`
+                    : `✕ ${exercise.name}`
+                  : exercise.name}
+              </ThemedText>
             </ThemedView>
           </Pressable>
         ))}
@@ -90,7 +113,24 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
             <ThemedText type="small">+ Neue Übung</ThemedText>
           </ThemedView>
         </Pressable>
+        <Pressable
+          style={({ pressed }) => pressed && styles.pressed}
+          onPress={() => {
+            setIsManaging((current) => !current);
+            setPendingDeleteId(null);
+          }}>
+          <ThemedView type={isManaging ? 'backgroundSelected' : 'background'} style={styles.chip}>
+            <ThemedText type="small">{isManaging ? 'Fertig' : 'Übungen löschen'}</ThemedText>
+          </ThemedView>
+        </Pressable>
       </ThemedView>
+
+      {isManaging && (
+        <ThemedText type="small" themeColor="textSecondary">
+          Tippe eine Übung an und bestätige mit einem zweiten Tipp. Achtung: Die Übung wird dabei
+          auch aus gespeicherten Trainings und Einheiten entfernt.
+        </ThemedText>
+      )}
 
       {showNewExerciseForm && (
         <ThemedView style={styles.field}>
@@ -171,6 +211,9 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   error: {
+    color: '#e5484d',
+  },
+  deleteText: {
     color: '#e5484d',
   },
 });

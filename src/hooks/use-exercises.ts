@@ -46,5 +46,15 @@ export function useExercises() {
     return { exercise: data as Exercise | null, error: error?.message ?? null };
   }
 
-  return { exercises, isLoading, addExercise, refresh };
+  // Caution: session_exercises/training_plan_exercises cascade on delete,
+  // so removing an exercise also removes it from logged trainings and plans.
+  async function deleteExercise(id: string) {
+    if (!userId) return 'Nicht angemeldet';
+    const { error } = await supabase.from('exercises').delete().eq('id', id);
+    if (error) return error.message;
+    await refresh();
+    return null;
+  }
+
+  return { exercises, isLoading, addExercise, deleteExercise, refresh };
 }
