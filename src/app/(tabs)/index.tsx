@@ -1,0 +1,529 @@
+import { addDays, addMonths, format, isToday } from 'date-fns';
+import { de } from 'date-fns/locale';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { LineChart } from '@/components/line-chart';
+import { MacroProgress } from '@/components/macro-progress';
+import { ThemedText } from '@/components/themed-text';
+import { ThemedView } from '@/components/themed-view';
+import { TrainingCalendar } from '@/components/training-calendar';
+import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { useDailyMacros } from '@/hooks/use-daily-macros';
+import { useMacroHistory } from '@/hooks/use-macro-history';
+import { useProfile } from '@/hooks/use-profile';
+import { useRuns } from '@/hooks/use-runs';
+import { useStepCount } from '@/hooks/use-step-count';
+import { useTheme } from '@/hooks/use-theme';
+import { useTrainingSessions } from '@/hooks/use-training-sessions';
+import { useWeights } from '@/hooks/use-weights';
+import { useWorkoutSessions } from '@/hooks/use-workout-sessions';
+
+const DATE_FORMAT = 'yyyy-MM-dd';
+
+export default function DashboardScreen() {
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const today = new Date();
+
+  const { profile } = useProfile();
+  const [viewDate, setViewDate] = useState(() => new Date());
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const [isMacrosCollapsed, setIsMacrosCollapsed] = useState(false);
+  const [isWeightCollapsed, setIsWeightCollapsed] = useState(false);
+
+  const { macros, saveMacros, deleteMacros, refresh: refreshMacros } = useDailyMacros(viewDate);
+  const { weights, saveWeight, deleteWeight, refresh: refreshWeights } = useWeights();
+  const { completedDates, refresh: refreshWorkouts } = useWorkoutSessions(calendarMonth);
+  const { sessions, refresh: refreshSessions } = useTrainingSessions();
+  const { runs, refresh: refreshRuns } = useRuns();
+  const { history: macroHistory, refresh: refreshMacroHistory } = useMacroHistory();
+  const { steps, isAvailable: isStepCountAvailable } = useStepCount(viewDate);
+
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const { macros: selectedDayMacros } = useDailyMacros(selectedDate ?? today);
+
+  const [protein, setProtein] = useState('');
+  const [carbs, setCarbs] = useState('');
+  const [fat, setFat] = useState('');
+  const [macroMessage, setMacroMessage] = useState<string | null>(null);
+  const [isSavingMacros, setIsSavingMacros] = useState(false);
+
+  const [weight, setWeight] = useState('');
+  const [weightMessage, setWeightMessage] = useState<string | null>(null);
+  const [isSavingWeight, setIsSavingWeight] = useState(false);
+
+  useEffect(() => {
+    setProtein(macros ? String(macros.protein_g) : '');
+    setCarbs(macros ? String(macros.carbs_g) : '');
+    setFat(macros ? String(macros.fat_g) : '');
+    setMacroMessage(null);
+  }, [macros]);
+
+  useEffect(() => {
+    const viewDateString = format(viewDate, 'yyyy-MM-dd');
+    const existing = weights.find((entry) => entry.date === viewDateString);
+    setWeight(existing ? String(existing.weight_kg) : '');
+    setWeightMessage(null);
+  }, [weights, viewDate]);
+
+  useFocusEffect(
+    useCallback(() => {
+      refreshMacros();
+      refreshWeights();
+      refreshWorkouts();
+      refreshSessions();
+      refreshRuns();
+      refreshMacroHistory();
+    }, [refreshMacros, refreshWeights, refreshWorkouts, refreshSessions, refreshRuns, refreshMacroHistory]),
+  );
+
+  const goals = profile ?? {
+    daily_calories: 2000,
+    daily_protein_g: 150,
+    daily_carbs_g: 200,
+    daily_fat_g: 70,
+  };
+
+  const proteinG = Number(protein) || 0;
+  const carbsG = Number(carbs) || 0;
+  const fatG = Number(fat) || 0;
+  const calculatedCalories = Math.round(proteinG * 4 + carbsG * 4 + fatG * 9);
+
+  const weightHistory = weights.slice().reverse();
+  const weightLabels = weightHistory.map((entry) => format(new Date(entry.date), 'd.M.', { locale: de }));
+
+  const macroLabels = macroHistory.map((entry) => format(new Date(entry.date), 'd.M.', { locale: de }));
+  const macroChartSeries = [
+    {
+      label: 'Kalorien (kcal)',
+      color: '#5B8DEF',
+      values: macroHistory.map((entry) =>
+        Math.round(entry.protein_g * 4 + entry.carbs_g * 4 + entry.fat_g * 9),
+      ),
+    },
+    { label: 'Protein (g)', color: '#22A06B', values: macroHistory.map((entry) => entry.protein_g) },
+    { label: 'Kohlenhydrate (g)', color: '#E5A93B', values: macroHistory.map((entry) => entry.carbs_g) },
+    { label: 'Fett (g)', color: '#E5484D', values: macroHistory.map((entry) => entry.fat_g) },
+  ];
+
+  const selectedDateString = selectedDate ? format(selectedDate, DATE_FORMAT) : null;
+  const selectedDayTrainings = selectedDateString
+    ? sessions.filter((trainingSession) => trainingSession.date === selectedDateString)
+    : [];
+  const selectedDayRuns = selectedDateString ? runs.filter((run) => run.date === selectedDateString) : [];
+  const selectedDayWeight = selectedDateString
+    ? weights.find((entry) => entry.date === selectedDateString)
+    : undefined;
+  const selectedDayCalories = selectedDayMacros
+    ? Math.round(selectedDayMacros.protein_g * 4 + selectedDayMacros.carbs_g * 4 + selectedDayMacros.fat_g * 9)
+    : 0;
+
+  async function handleSaveMacros() {
+    setMacroMessage(null);
+    setIsSavingMacros(true);
+    const error = await saveMacros(proteinG, carbsG, fatG);
+    setIsSavingMacros(false);
+    setMacroMessage(error ?? 'Gespeichert.');
+  }
+
+  async function handleDeleteMacros() {
+    setMacroMessage(null);
+    setIsSavingMacros(true);
+    const error = await deleteMacros();
+    setIsSavingMacros(false);
+    if (error) {
+      setMacroMessage(error);
+      return;
+    }
+    setProtein('');
+    setCarbs('');
+    setFat('');
+    setMacroMessage('Gelöscht.');
+  }
+
+  async function handleSaveWeight() {
+    const weightKg = Number(weight);
+    if (!weightKg || weightKg <= 0) {
+      setWeightMessage('Bitte ein gültiges Gewicht eingeben.');
+      return;
+    }
+    setWeightMessage(null);
+    setIsSavingWeight(true);
+    const error = await saveWeight(viewDate, weightKg);
+    setIsSavingWeight(false);
+    setWeightMessage(error ?? 'Gespeichert.');
+  }
+
+  return (
+    <ScrollView
+      contentContainerStyle={[
+        styles.contentContainer,
+        { paddingTop: insets.top + Spacing.three, paddingBottom: insets.bottom + BottomTabInset + Spacing.three },
+      ]}>
+      <ThemedView style={styles.container}>
+        <ThemedView style={styles.header}>
+          <Pressable
+            style={({ pressed }) => [styles.dayButton, pressed && styles.pressed]}
+            onPress={() => setViewDate((current) => addDays(current, -1))}>
+            <ThemedText type="smallBold">‹</ThemedText>
+          </Pressable>
+          <ThemedView style={styles.headerCenter}>
+            <ThemedText type="subtitle">{isToday(viewDate) ? 'Heute' : format(viewDate, 'EEEE', { locale: de })}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {format(viewDate, 'd. MMMM yyyy', { locale: de })}
+            </ThemedText>
+          </ThemedView>
+          <Pressable
+            style={({ pressed }) => [styles.dayButton, pressed && styles.pressed]}
+            onPress={() => setViewDate((current) => addDays(current, 1))}>
+            <ThemedText type="smallBold">›</ThemedText>
+          </Pressable>
+        </ThemedView>
+
+        {isStepCountAvailable && steps != null && (
+          <ThemedView type="backgroundElement" style={styles.stepsCard}>
+            <ThemedText type="smallBold">🚶 Schritte</ThemedText>
+            <ThemedText type="title" themeColor="accent">
+              {steps.toLocaleString('de-DE')}
+            </ThemedText>
+          </ThemedView>
+        )}
+
+        <ThemedView type="backgroundElement" style={styles.macroCard}>
+          <Pressable
+            style={({ pressed }) => pressed && styles.pressed}
+            onPress={() => setIsMacrosCollapsed((current) => !current)}>
+            <ThemedView style={styles.collapseHeader}>
+              <ThemedText type="smallBold">Tagesmakros</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {isMacrosCollapsed ? '▸ Aufklappen' : '▾ Einklappen'}
+              </ThemedText>
+            </ThemedView>
+          </Pressable>
+
+          {!isMacrosCollapsed && (
+            <>
+              <MacroProgress
+                label="Kalorien"
+                current={calculatedCalories}
+                goal={goals.daily_calories}
+                unit="kcal"
+              />
+              <MacroProgress label="Protein" current={proteinG} goal={goals.daily_protein_g} unit="g" />
+              <MacroProgress label="Kohlenhydrate" current={carbsG} goal={goals.daily_carbs_g} unit="g" />
+              <MacroProgress label="Fett" current={fatG} goal={goals.daily_fat_g} unit="g" />
+
+              <ThemedView style={styles.row}>
+                <ThemedView style={[styles.field, styles.flex1]}>
+                  <ThemedText type="small">Protein (g)</ThemedText>
+                  <TextInput
+                    style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
+                    keyboardType="numeric"
+                    value={protein}
+                    onChangeText={setProtein}
+                  />
+                </ThemedView>
+                <ThemedView style={[styles.field, styles.flex1]}>
+                  <ThemedText type="small">Kohlenhydrate (g)</ThemedText>
+                  <TextInput
+                    style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
+                    keyboardType="numeric"
+                    value={carbs}
+                    onChangeText={setCarbs}
+                  />
+                </ThemedView>
+                <ThemedView style={[styles.field, styles.flex1]}>
+                  <ThemedText type="small">Fett (g)</ThemedText>
+                  <TextInput
+                    style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
+                    keyboardType="numeric"
+                    value={fat}
+                    onChangeText={setFat}
+                  />
+                </ThemedView>
+              </ThemedView>
+
+              {macroMessage && <ThemedText type="small">{macroMessage}</ThemedText>}
+
+              <ThemedView style={styles.row}>
+                <Pressable
+                  style={({ pressed }) => [styles.saveButton, styles.flex1, pressed && styles.pressed]}
+                  disabled={isSavingMacros}
+                  onPress={handleSaveMacros}>
+                  <ThemedView type="accent" style={styles.saveButtonInner}>
+                    <ThemedText type="smallBold" themeColor="accentText">
+                      Makros speichern
+                    </ThemedText>
+                  </ThemedView>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.saveButton, styles.flex1, pressed && styles.pressed]}
+                  disabled={isSavingMacros}
+                  onPress={handleDeleteMacros}>
+                  <ThemedView type="background" style={styles.saveButtonInner}>
+                    <ThemedText type="smallBold">Löschen</ThemedText>
+                  </ThemedView>
+                </Pressable>
+              </ThemedView>
+            </>
+          )}
+        </ThemedView>
+
+        <ThemedView type="backgroundElement" style={styles.macroCard}>
+          <Pressable
+            style={({ pressed }) => pressed && styles.pressed}
+            onPress={() => setIsWeightCollapsed((current) => !current)}>
+            <ThemedView style={styles.collapseHeader}>
+              <ThemedText type="smallBold">Gewicht</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {isWeightCollapsed ? '▸ Aufklappen' : '▾ Einklappen'}
+              </ThemedText>
+            </ThemedView>
+          </Pressable>
+
+          {!isWeightCollapsed && (
+            <>
+              <ThemedView style={styles.row}>
+                <ThemedView style={[styles.field, styles.flex1]}>
+                  <ThemedText type="small">Gewicht (kg)</ThemedText>
+                  <TextInput
+                    style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
+                    keyboardType="numeric"
+                    value={weight}
+                    onChangeText={setWeight}
+                  />
+                </ThemedView>
+              </ThemedView>
+
+              {weightMessage && <ThemedText type="small">{weightMessage}</ThemedText>}
+
+              <Pressable
+                style={({ pressed }) => [styles.saveButton, pressed && styles.pressed]}
+                disabled={isSavingWeight}
+                onPress={handleSaveWeight}>
+                <ThemedView type="accent" style={styles.saveButtonInner}>
+                  <ThemedText type="smallBold" themeColor="accentText">
+                    Gewicht speichern
+                  </ThemedText>
+                </ThemedView>
+              </Pressable>
+
+              {weights.length > 0 && (
+                <ThemedView style={styles.weightHistory}>
+                  {weights.slice(0, 7).map((entry) => (
+                    <ThemedView key={entry.id} style={styles.weightRow}>
+                      <ThemedText type="small" themeColor="textSecondary">
+                        {format(new Date(entry.date), 'EEEE, d. MMMM', { locale: de })}
+                      </ThemedText>
+                      <ThemedView style={styles.weightRowRight}>
+                        <ThemedText type="small">{entry.weight_kg} kg</ThemedText>
+                        <Pressable
+                          style={({ pressed }) => pressed && styles.pressed}
+                          onPress={() => deleteWeight(entry.id)}>
+                          <ThemedText type="small" themeColor="textSecondary">
+                            Löschen
+                          </ThemedText>
+                        </Pressable>
+                      </ThemedView>
+                    </ThemedView>
+                  ))}
+                </ThemedView>
+              )}
+            </>
+          )}
+        </ThemedView>
+
+        <TrainingCalendar
+          month={calendarMonth}
+          completedDates={completedDates}
+          selectedDate={selectedDate}
+          onSelectDate={(date) => setSelectedDate(date)}
+          onChangeMonth={(delta) => setCalendarMonth((current) => addMonths(current, delta))}
+        />
+
+        {selectedDate && (
+          <ThemedView type="backgroundElement" style={styles.macroCard}>
+            <ThemedView style={styles.dayDetailHeader}>
+              <ThemedText type="smallBold">
+                {format(selectedDate, 'EEEE, d. MMMM', { locale: de })}
+              </ThemedText>
+              <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={() => setSelectedDate(null)}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Schließen
+                </ThemedText>
+              </Pressable>
+            </ThemedView>
+
+            {selectedDayTrainings.length === 0 &&
+              selectedDayRuns.length === 0 &&
+              !selectedDayWeight &&
+              !selectedDayMacros && (
+                <ThemedText type="small" themeColor="textSecondary">
+                  Keine Einträge an diesem Tag.
+                </ThemedText>
+              )}
+
+            {selectedDayTrainings.map((trainingSession) => (
+              <ThemedView key={trainingSession.id} style={styles.dayDetailItem}>
+                <ThemedText type="small">
+                  {trainingSession.name}
+                  {trainingSession.duration_minutes != null ? ` · ${trainingSession.duration_minutes} min` : ''}
+                </ThemedText>
+                {trainingSession.session_exercises
+                  .slice()
+                  .sort((a, b) => a.order_index - b.order_index)
+                  .map((sessionExercise) =>
+                    sessionExercise.set_entries.length > 0 ? (
+                      <ThemedView key={sessionExercise.id} style={styles.dayDetailExercise}>
+                        <ThemedText type="small">{sessionExercise.exercise?.name}</ThemedText>
+                        {sessionExercise.set_entries.map((set, index) => (
+                          <ThemedText key={index} type="small" themeColor="textSecondary">
+                            Satz {index + 1}: {set.weight_kg > 0 ? `${set.weight_kg} kg × ` : ''}
+                            {set.reps} Wdh.
+                          </ThemedText>
+                        ))}
+                      </ThemedView>
+                    ) : (
+                      <ThemedText key={sessionExercise.id} type="small" themeColor="textSecondary">
+                        {sessionExercise.exercise?.name}: {sessionExercise.sets} × {sessionExercise.reps}
+                        {sessionExercise.weight_kg > 0 ? ` · ${sessionExercise.weight_kg} kg` : ''}
+                      </ThemedText>
+                    ),
+                  )}
+              </ThemedView>
+            ))}
+
+            {selectedDayRuns.map((run) => (
+              <ThemedView key={run.id} style={styles.dayDetailItem}>
+                <ThemedText type="small">Lauf</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {run.distance_km} km · {run.duration_minutes} min
+                </ThemedText>
+              </ThemedView>
+            ))}
+
+            {selectedDayWeight && (
+              <ThemedView style={styles.dayDetailItem}>
+                <ThemedText type="small">Gewicht</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {selectedDayWeight.weight_kg} kg
+                </ThemedText>
+              </ThemedView>
+            )}
+
+            {selectedDayMacros && (
+              <ThemedView style={styles.dayDetailItem}>
+                <ThemedText type="small">Makros</ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {selectedDayCalories} kcal · {selectedDayMacros.protein_g} g Protein ·{' '}
+                  {selectedDayMacros.carbs_g} g Kohlenhydrate · {selectedDayMacros.fat_g} g Fett
+                </ThemedText>
+              </ThemedView>
+            )}
+          </ThemedView>
+        )}
+
+        <LineChart title="Gewichtsverlauf" series={[{ label: 'Gewicht (kg)', color: '#5B8DEF', values: weightHistory.map((entry) => entry.weight_kg) }]} labels={weightLabels} />
+
+        <LineChart title="Kalorien & Makros" series={macroChartSeries} labels={macroLabels} />
+      </ThemedView>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  contentContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  container: {
+    flexGrow: 1,
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    paddingHorizontal: Spacing.four,
+    gap: Spacing.four,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerCenter: {
+    alignItems: 'center',
+  },
+  dayButton: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  collapseHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  stepsCard: {
+    gap: Spacing.one,
+    padding: Spacing.three,
+    borderRadius: Spacing.four,
+    alignItems: 'center',
+  },
+  macroCard: {
+    gap: Spacing.three,
+    padding: Spacing.three,
+    borderRadius: Spacing.four,
+  },
+  field: {
+    gap: Spacing.one,
+  },
+  flex1: {
+    flex: 1,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    fontSize: 16,
+  },
+  saveButton: {
+    borderRadius: Spacing.two,
+  },
+  saveButtonInner: {
+    alignItems: 'center',
+    paddingVertical: Spacing.three,
+    borderRadius: Spacing.two,
+  },
+  pressed: {
+    opacity: 0.7,
+  },
+  weightHistory: {
+    gap: Spacing.one,
+  },
+  weightRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  weightRowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+  },
+  dayDetailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  dayDetailItem: {
+    gap: Spacing.half,
+  },
+  dayDetailExercise: {
+    gap: Spacing.half,
+  },
+});
