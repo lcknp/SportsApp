@@ -26,7 +26,7 @@
 
 // Konfiguration für das eigene Tracker-Blatt:
 const TRACKER = {
-  sheetName: null, // null = erstes Blatt der Tabelle; sonst z.B. 'Tabelle1'
+  sheetName: 'YOUR DATA', // Name des Tab-Blatts mit deiner Tracking-Liste
   dateColumn: 2, // B  = DATE (Format TT.MM.JJJJ)
   weightColumn: 3, // C  = WEIGHT
   proteinColumn: 6, // F  = PROTEIN
