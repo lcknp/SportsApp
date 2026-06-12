@@ -75,5 +75,14 @@ export function useTrainingPlans() {
     return null;
   }
 
-  return { plans, isLoading, createPlan, deletePlan, refresh };
+  // Einheit einer Gruppe zuordnen (groupId null = aus der Gruppe entfernen)
+  async function setPlanGroup(planId: string, groupId: string | null) {
+    if (!userId) return 'Nicht angemeldet';
+    const { error } = await supabase.from('training_plans').update({ group_id: groupId }).eq('id', planId);
+    if (error) return error.message;
+    await refresh();
+    return null;
+  }
+
+  return { plans, isLoading, createPlan, deletePlan, setPlanGroup, refresh };
 }

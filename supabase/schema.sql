@@ -162,14 +162,37 @@ create index if not exists session_exercises_session_idx
   on public.session_exercises (session_id);
 
 -- ---------------------------------------------------------------------------
+-- Plan groups: bündeln mehrere Einheiten zu einem Split (z.B. Push/Pull/Beine)
+-- ---------------------------------------------------------------------------
+create table if not exists public.plan_groups (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  name text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table public.plan_groups enable row level security;
+
+drop policy if exists "Users manage their own plan groups" on public.plan_groups;
+create policy "Users manage their own plan groups"
+  on public.plan_groups
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- ---------------------------------------------------------------------------
 -- Training plans: wiederverwendbare Einheiten ("Training erstellen")
 -- ---------------------------------------------------------------------------
 create table if not exists public.training_plans (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users (id) on delete cascade,
   name text not null,
+  group_id uuid references public.plan_groups (id) on delete set null,
   created_at timestamptz not null default now()
 );
+
+alter table public.training_plans
+  add column if not exists group_id uuid references public.plan_groups (id) on delete set null;
 
 alter table public.training_plans enable row level security;
 

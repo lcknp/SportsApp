@@ -73,6 +73,12 @@ export default function TrainingScreen() {
           </Pressable>
         </ThemedView>
 
+        <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={() => router.push('/volume')}>
+          <ThemedText type="link" themeColor="textSecondary" style={styles.volumeLink}>
+            📊 Volumen-Übersicht & Gruppen
+          </ThemedText>
+        </Pressable>
+
         {isChoosingPlan && (
           <ThemedView type="backgroundElement" style={styles.card}>
             <ThemedText type="smallBold">Einheit auswählen</ThemedText>
@@ -248,6 +254,9 @@ const styles = StyleSheet.create({
   planStart: {
     flex: 1,
     borderRadius: Spacing.three,
+  },
+  volumeLink: {
+    textAlign: 'center',
   },
   card: {
     gap: Spacing.two,
