@@ -1,18 +1,18 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
 import { ExercisePicker } from '@/components/exercise-picker';
 import {
   DEFAULT_DRAFT_SET,
   ExerciseSetList,
   type DraftSet,
-  type EditableExercise,
 } from '@/components/exercise-set-list';
 import { ThemedText } from '@/components/themed-text';
+import { ThemedTextInput } from '@/components/themed-text-input';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { formatElapsed, useActiveWorkout } from '@/contexts/active-workout-context';
 import { useTrainingPlans } from '@/hooks/use-training-plans';
 import { useTrainingSessions } from '@/hooks/use-training-sessions';
 import type { Exercise, SetEntry } from '@/types/database';
@@ -25,25 +25,21 @@ function toDraftSets(entries: SetEntry[]): DraftSet[] {
 }
 
 export default function ActiveTrainingScreen() {
-  const theme = useTheme();
   const { planId } = useLocalSearchParams<{ planId?: string }>();
   const { sessions, isLoading: sessionsLoading, createSession } = useTrainingSessions();
   const { plans } = useTrainingPlans();
+  const { workout, setWorkout, clearWorkout } = useActiveWorkout();
 
-  const [name, setName] = useState('Training');
-  const [exercises, setExercises] = useState<EditableExercise[]>([]);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const appliedPlanRef = useRef<string | null>(null);
+  const [, forceTick] = useState(0);
+  // Verhindert, dass der Init-Effekt nach Beenden/Abbrechen ein neues Training anlegt.
+  const isClosingRef = useRef(false);
 
-  // Tick the workout timer from the moment the screen opens.
   useEffect(() => {
-    const interval = setInterval(() => {
-      setElapsedSeconds((current) => current + 1);
-    }, 1000);
+    const interval = setInterval(() => forceTick((n) => n + 1), 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -56,16 +52,30 @@ export default function ActiveTrainingScreen() {
     return null;
   }
 
+  // Training starten bzw. fortsetzen: Läuft schon eins (gleiche Einheit), wird es
+  // einfach weitergeführt — sonst neu anlegen.
   useEffect(() => {
-    if (!planId || appliedPlanRef.current === planId) return;
+    if (isClosingRef.current) return;
+
+    if (!planId) {
+      if (!workout) {
+        setWorkout({ name: 'Training', exercises: [], startedAt: Date.now(), planId: null });
+      }
+      return;
+    }
+
+    if (workout && workout.planId === planId) return;
+
     const plan = plans.find((p) => p.id === planId);
     if (!plan) return;
     // Wait for sessions so prefilling can use the latest logged values.
     if (sessionsLoading) return;
-    appliedPlanRef.current = planId;
-    setName(plan.name);
-    setExercises(
-      plan.training_plan_exercises
+
+    setWorkout({
+      name: plan.name,
+      startedAt: Date.now(),
+      planId,
+      exercises: plan.training_plan_exercises
         .slice()
         .sort((a, b) => a.order_index - b.order_index)
         .map((planExercise) => {
@@ -79,41 +89,42 @@ export default function ActiveTrainingScreen() {
             sets: entries.length > 0 ? toDraftSets(entries) : [{ ...DEFAULT_DRAFT_SET }],
           };
         }),
-    );
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [planId, plans, sessions, sessionsLoading]);
-
-  function formatElapsed(totalSeconds: number) {
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-  }
+  }, [planId, plans, sessions, sessionsLoading, workout]);
 
   function handleSelectExercise(exercise: Exercise) {
     const lastEntries = getLastSetEntries(exercise.id);
-    setExercises((current) => [
-      ...current,
-      {
-        exercise_id: exercise.id,
-        name: exercise.name,
-        video_url: exercise.video_url,
-        target: exercise.target,
-        sets: lastEntries ? toDraftSets(lastEntries) : [{ ...DEFAULT_DRAFT_SET }],
-      },
-    ]);
+    setWorkout(
+      (current) =>
+        current && {
+          ...current,
+          exercises: [
+            ...current.exercises,
+            {
+              exercise_id: exercise.id,
+              name: exercise.name,
+              video_url: exercise.video_url,
+              target: exercise.target,
+              sets: lastEntries ? toDraftSets(lastEntries) : [{ ...DEFAULT_DRAFT_SET }],
+            },
+          ],
+        },
+    );
   }
 
   async function handleFinish() {
+    if (!workout) return;
     setError(null);
-    if (exercises.length === 0) {
+    if (workout.exercises.length === 0) {
       setError('Füge mindestens eine Übung hinzu oder brich das Training ab.');
       return;
     }
     setIsSaving(true);
     const message = await createSession(
       new Date(),
-      name.trim() || 'Training',
-      exercises.map((exercise) => ({
+      workout.name.trim() || 'Training',
+      workout.exercises.map((exercise) => ({
         exercise_id: exercise.exercise_id,
         set_entries: exercise.sets.map(
           (set): SetEntry => ({
@@ -122,20 +133,34 @@ export default function ActiveTrainingScreen() {
           }),
         ),
       })),
-      Math.max(1, Math.round(elapsedSeconds / 60)),
+      Math.max(1, Math.round((Date.now() - workout.startedAt) / 60000)),
     );
     setIsSaving(false);
     if (message) {
       setError(message);
       return;
     }
+    isClosingRef.current = true;
+    clearWorkout();
     router.back();
   }
+
+  function handleCancel() {
+    isClosingRef.current = true;
+    clearWorkout();
+    router.back();
+  }
+
+  if (!workout) {
+    return null;
+  }
+
+  const elapsedSeconds = Math.max(0, Math.floor((Date.now() - workout.startedAt) / 1000));
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <ThemedView style={styles.titleRow}>
-        <ThemedText type="title">{name}</ThemedText>
+        <ThemedText type="title">{workout.name}</ThemedText>
         <ThemedView type="accent" style={styles.timerBadge}>
           <ThemedText type="smallBold" themeColor="accentText">
             ⏱ {formatElapsed(elapsedSeconds)}
@@ -143,28 +168,36 @@ export default function ActiveTrainingScreen() {
         </ThemedView>
       </ThemedView>
 
+      <Pressable style={({ pressed }) => [styles.button, pressed && styles.pressed]} onPress={() => router.back()}>
+        <ThemedView type="backgroundElement" style={styles.buttonInner}>
+          <ThemedText type="smallBold">▾ Minimieren — Training läuft weiter</ThemedText>
+        </ThemedView>
+      </Pressable>
+
       <ThemedView style={styles.field}>
         <ThemedText type="small">Name</ThemedText>
-        <TextInput
-          style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-          value={name}
-          onChangeText={setName}
+        <ThemedTextInput
+          value={workout.name}
+          onChangeText={(value) => setWorkout((current) => current && { ...current, name: value })}
         />
       </ThemedView>
 
-      {exercises.length === 0 && (
+      {workout.exercises.length === 0 && (
         <ThemedText type="small" themeColor="textSecondary">
           Trage bei jedem Satz das Gewicht und die Wiederholungen ein, die du geschafft hast. Beim
           nächsten Training werden sie automatisch vorausgefüllt.
         </ThemedText>
       )}
 
-      <ExerciseSetList exercises={exercises} onChange={setExercises} />
+      <ExerciseSetList
+        exercises={workout.exercises}
+        onChange={(next) => setWorkout((current) => current && { ...current, exercises: next })}
+      />
 
       <Pressable
         style={({ pressed }) => [styles.button, pressed && styles.pressed]}
         onPress={() => setIsPickerOpen((current) => !current)}>
-        <ThemedView type="background" style={styles.buttonInner}>
+        <ThemedView type="backgroundElement" style={styles.buttonInner}>
           <ThemedText type="smallBold">{isPickerOpen ? '− Übung hinzufügen' : '+ Übung hinzufügen'}</ThemedText>
         </ThemedView>
       </Pressable>
@@ -188,7 +221,7 @@ export default function ActiveTrainingScreen() {
         </ThemedView>
       </Pressable>
 
-      <Pressable style={({ pressed }) => [styles.button, pressed && styles.pressed]} onPress={() => router.back()}>
+      <Pressable style={({ pressed }) => [styles.button, pressed && styles.pressed]} onPress={handleCancel}>
         <ThemedText type="small" themeColor="textSecondary" style={styles.cancelText}>
           Abbrechen (nichts speichern)
         </ThemedText>
@@ -218,13 +251,6 @@ const styles = StyleSheet.create({
   },
   field: {
     gap: Spacing.two,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    fontSize: 16,
   },
   button: {
     borderRadius: Spacing.two,

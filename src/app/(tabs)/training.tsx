@@ -1,25 +1,25 @@
-import { format } from 'date-fns';
-import { de } from 'date-fns/locale';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CalendarBadge } from '@/components/calendar-badge';
 import { DateStepper } from '@/components/date-stepper';
 import { ThemedText } from '@/components/themed-text';
+import { ThemedTextInput } from '@/components/themed-text-input';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
+import { groupByMonth } from '@/lib/month-groups';
 import { useTrainingPlans } from '@/hooks/use-training-plans';
 import { useTrainingSessions } from '@/hooks/use-training-sessions';
 
 export default function TrainingScreen() {
-  const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { sessions, deleteSession, updateSession, refresh } = useTrainingSessions();
   const { plans, deletePlan, refresh: refreshPlans } = useTrainingPlans();
 
   const [isChoosingPlan, setIsChoosingPlan] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDate, setEditDate] = useState(new Date());
   const [editDuration, setEditDuration] = useState('');
@@ -43,11 +43,13 @@ export default function TrainingScreen() {
     setEditingId(null);
   }
 
+  const monthGroups = groupByMonth(sessions, (trainingSession) => trainingSession.date);
+
   return (
     <ScrollView
       contentContainerStyle={[
         styles.contentContainer,
-        { paddingTop: insets.top + Spacing.three, paddingBottom: insets.bottom + BottomTabInset + Spacing.three },
+        { paddingTop: insets.top + Spacing.three, paddingBottom: insets.bottom + BottomTabInset + Spacing.six },
       ]}>
       <ThemedView style={styles.container}>
         <ThemedView style={styles.header}>
@@ -124,91 +126,129 @@ export default function TrainingScreen() {
           </ThemedText>
         )}
 
-        {sessions.map((trainingSession) => (
-          <ThemedView key={trainingSession.id} type="backgroundElement" style={styles.card}>
-            <ThemedView style={styles.cardHeader}>
-              <ThemedView>
-                <ThemedText type="smallBold">{trainingSession.name}</ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {format(new Date(trainingSession.date), 'EEEE, d. MMMM', { locale: de })}
-                  {trainingSession.duration_minutes != null
-                    ? ` · ${trainingSession.duration_minutes} min`
-                    : ''}
-                </ThemedText>
-              </ThemedView>
-              <ThemedView style={styles.cardHeaderActions}>
-                <Pressable
-                  style={({ pressed }) => pressed && styles.pressed}
-                  onPress={() =>
-                    editingId === trainingSession.id
-                      ? setEditingId(null)
-                      : startEditing(trainingSession.id, trainingSession.date, trainingSession.duration_minutes)
-                  }>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {editingId === trainingSession.id ? 'Abbrechen' : 'Bearbeiten'}
-                  </ThemedText>
-                </Pressable>
-                <Pressable
-                  style={({ pressed }) => pressed && styles.pressed}
-                  onPress={() => deleteSession(trainingSession.id)}>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    Löschen
-                  </ThemedText>
-                </Pressable>
-              </ThemedView>
+        {monthGroups.map((group) => (
+          <ThemedView key={group.label} style={styles.monthGroup}>
+            <ThemedView style={styles.monthHeader}>
+              <ThemedText type="smallBold" themeColor="textSecondary">
+                {group.label}
+              </ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {group.items.length} {group.items.length === 1 ? 'Workout' : 'Workouts'}
+              </ThemedText>
             </ThemedView>
 
-            {editingId === trainingSession.id && (
-              <ThemedView style={styles.editArea}>
-                <DateStepper date={editDate} onChange={setEditDate} />
-                <ThemedView style={styles.field}>
-                  <ThemedText type="small">Dauer (Minuten)</ThemedText>
-                  <TextInput
-                    style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-                    keyboardType="numeric"
-                    value={editDuration}
-                    onChangeText={setEditDuration}
-                  />
-                </ThemedView>
-                <Pressable
-                  style={({ pressed }) => [styles.saveButton, pressed && styles.pressed]}
-                  onPress={handleSaveEdit}>
-                  <ThemedView type="accent" style={styles.saveButtonInner}>
-                    <ThemedText type="smallBold" themeColor="accentText">
-                      Speichern
-                    </ThemedText>
-                  </ThemedView>
-                </Pressable>
-              </ThemedView>
-            )}
-
-            {trainingSession.session_exercises.length === 0 ? (
-              <ThemedText type="small" themeColor="textSecondary">
-                Keine Übungen eingetragen.
-              </ThemedText>
-            ) : (
-              trainingSession.session_exercises
+            {group.items.map((trainingSession) => {
+              const isExpanded = expandedId === trainingSession.id;
+              const sortedExercises = trainingSession.session_exercises
                 .slice()
-                .sort((a, b) => a.order_index - b.order_index)
-                .map((sessionExercise) => (
-                  <ThemedView key={sessionExercise.id} style={styles.exerciseGroup}>
-                    <ThemedText type="small">{sessionExercise.exercise?.name}</ThemedText>
-                    {sessionExercise.set_entries.length > 0 ? (
-                      sessionExercise.set_entries.map((set, index) => (
-                        <ThemedText key={index} type="small" themeColor="textSecondary">
-                          Satz {index + 1}: {set.weight_kg > 0 ? `${set.weight_kg} kg × ` : ''}
-                          {set.reps} Wdh.
+                .sort((a, b) => a.order_index - b.order_index);
+              return (
+                <Pressable
+                  key={trainingSession.id}
+                  style={({ pressed }) => pressed && styles.pressed}
+                  onPress={() => {
+                    setExpandedId(isExpanded ? null : trainingSession.id);
+                    if (isExpanded) setEditingId(null);
+                  }}>
+                  <ThemedView type="backgroundElement" style={styles.card}>
+                    <ThemedView style={styles.logRow}>
+                      <CalendarBadge date={new Date(trainingSession.date)} />
+                      <ThemedView style={styles.logBody}>
+                        <ThemedText type="smallBold">{trainingSession.name}</ThemedText>
+                        {sortedExercises.length === 0 ? (
+                          <ThemedText type="small" themeColor="textSecondary">
+                            Keine Übungen eingetragen.
+                          </ThemedText>
+                        ) : (
+                          sortedExercises.map((sessionExercise) => (
+                            <ThemedText key={sessionExercise.id} type="small" themeColor="textSecondary">
+                              {sessionExercise.set_entries.length || sessionExercise.sets}x{' '}
+                              {sessionExercise.exercise?.name}
+                            </ThemedText>
+                          ))
+                        )}
+                      </ThemedView>
+                      {trainingSession.duration_minutes != null && (
+                        <ThemedText type="small" themeColor="textSecondary">
+                          {trainingSession.duration_minutes} min
                         </ThemedText>
-                      ))
-                    ) : (
-                      <ThemedText type="small" themeColor="textSecondary">
-                        {sessionExercise.sets} × {sessionExercise.reps}
-                        {sessionExercise.weight_kg > 0 ? ` · ${sessionExercise.weight_kg} kg` : ''}
-                      </ThemedText>
+                      )}
+                    </ThemedView>
+
+                    {isExpanded && (
+                      <ThemedView style={styles.detailArea}>
+                        {sortedExercises.map((sessionExercise) => (
+                          <ThemedView key={sessionExercise.id} style={styles.exerciseGroup}>
+                            <ThemedText type="small">{sessionExercise.exercise?.name}</ThemedText>
+                            {sessionExercise.set_entries.length > 0 ? (
+                              sessionExercise.set_entries.map((set, index) => (
+                                <ThemedText key={index} type="small" themeColor="textSecondary">
+                                  Satz {index + 1}: {set.weight_kg > 0 ? `${set.weight_kg} kg × ` : ''}
+                                  {set.reps} Wdh.
+                                </ThemedText>
+                              ))
+                            ) : (
+                              <ThemedText type="small" themeColor="textSecondary">
+                                {sessionExercise.sets} × {sessionExercise.reps}
+                                {sessionExercise.weight_kg > 0 ? ` · ${sessionExercise.weight_kg} kg` : ''}
+                              </ThemedText>
+                            )}
+                          </ThemedView>
+                        ))}
+
+                        <ThemedView style={styles.detailActions}>
+                          <Pressable
+                            style={({ pressed }) => pressed && styles.pressed}
+                            onPress={() =>
+                              editingId === trainingSession.id
+                                ? setEditingId(null)
+                                : startEditing(
+                                    trainingSession.id,
+                                    trainingSession.date,
+                                    trainingSession.duration_minutes,
+                                  )
+                            }>
+                            <ThemedText type="small" themeColor="textSecondary">
+                              {editingId === trainingSession.id ? 'Abbrechen' : 'Bearbeiten'}
+                            </ThemedText>
+                          </Pressable>
+                          <Pressable
+                            style={({ pressed }) => pressed && styles.pressed}
+                            onPress={() => deleteSession(trainingSession.id)}>
+                            <ThemedText type="small" themeColor="textSecondary">
+                              Löschen
+                            </ThemedText>
+                          </Pressable>
+                        </ThemedView>
+
+                        {editingId === trainingSession.id && (
+                          <ThemedView style={styles.editArea}>
+                            <DateStepper date={editDate} onChange={setEditDate} />
+                            <ThemedView style={styles.field}>
+                              <ThemedText type="small">Dauer (Minuten)</ThemedText>
+                              <ThemedTextInput
+                                keyboardType="numeric"
+                                value={editDuration}
+                                onChangeText={setEditDuration}
+                              />
+                            </ThemedView>
+                            <Pressable
+                              style={({ pressed }) => [styles.saveButton, pressed && styles.pressed]}
+                              onPress={handleSaveEdit}>
+                              <ThemedView type="accent" style={styles.saveButtonInner}>
+                                <ThemedText type="smallBold" themeColor="accentText">
+                                  Speichern
+                                </ThemedText>
+                              </ThemedView>
+                            </Pressable>
+                          </ThemedView>
+                        )}
+                      </ThemedView>
                     )}
                   </ThemedView>
-                ))
-            )}
+                </Pressable>
+              );
+            })}
           </ThemedView>
         ))}
       </ThemedView>
@@ -258,18 +298,37 @@ const styles = StyleSheet.create({
   volumeLink: {
     textAlign: 'center',
   },
+  monthGroup: {
+    gap: Spacing.two,
+  },
+  monthHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.one,
+    marginTop: Spacing.two,
+  },
   card: {
     gap: Spacing.two,
     padding: Spacing.three,
     borderRadius: Spacing.four,
   },
-  cardHeader: {
+  logRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    gap: Spacing.three,
+    alignItems: 'flex-start',
   },
-  cardHeaderActions: {
+  logBody: {
+    flex: 1,
+    gap: Spacing.half,
+  },
+  detailArea: {
+    gap: Spacing.two,
+    paddingTop: Spacing.two,
+  },
+  detailActions: {
     flexDirection: 'row',
+    justifyContent: 'flex-end',
     gap: Spacing.three,
   },
   planChip: {
@@ -283,13 +342,6 @@ const styles = StyleSheet.create({
   },
   field: {
     gap: Spacing.one,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    fontSize: 16,
   },
   saveButton: {
     borderRadius: Spacing.two,

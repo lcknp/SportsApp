@@ -1,11 +1,11 @@
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
 import { ExerciseVideoButton } from './exercise-video';
 import { ThemedText } from './themed-text';
+import { ThemedTextInput } from './themed-text-input';
 import { ThemedView } from './themed-view';
 
 import { Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 
 export type DraftSet = { reps: string; weight_kg: string };
 
@@ -25,8 +25,6 @@ type ExerciseSetListProps = {
 };
 
 export function ExerciseSetList({ exercises, onChange }: ExerciseSetListProps) {
-  const theme = useTheme();
-
   function updateSetField(exerciseIndex: number, setIndex: number, field: keyof DraftSet, value: string) {
     onChange(
       exercises.map((exercise, i) =>
@@ -96,8 +94,7 @@ export function ExerciseSetList({ exercises, onChange }: ExerciseSetListProps) {
               </ThemedView>
               <ThemedView style={[styles.field, styles.flex1]}>
                 <ThemedText type="small">kg</ThemedText>
-                <TextInput
-                  style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
+                <ThemedTextInput
                   keyboardType="numeric"
                   value={set.weight_kg}
                   onChangeText={(value) => updateSetField(exerciseIndex, setIndex, 'weight_kg', value)}
@@ -105,8 +102,7 @@ export function ExerciseSetList({ exercises, onChange }: ExerciseSetListProps) {
               </ThemedView>
               <ThemedView style={[styles.field, styles.flex1]}>
                 <ThemedText type="small">Wdh.</ThemedText>
-                <TextInput
-                  style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
+                <ThemedTextInput
                   keyboardType="numeric"
                   value={set.reps}
                   onChangeText={(value) => updateSetField(exerciseIndex, setIndex, 'reps', value)}
@@ -123,7 +119,7 @@ export function ExerciseSetList({ exercises, onChange }: ExerciseSetListProps) {
           <Pressable
             style={({ pressed }) => [styles.addSetButton, pressed && styles.pressed]}
             onPress={() => addSetRow(exerciseIndex)}>
-            <ThemedView type="background" style={styles.addSetButtonInner}>
+            <ThemedView type="backgroundSelected" style={styles.addSetButtonInner}>
               <ThemedText type="smallBold">+ Satz hinzufügen</ThemedText>
             </ThemedView>
           </Pressable>
@@ -176,13 +172,6 @@ const styles = StyleSheet.create({
   },
   flex1: {
     flex: 1,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    fontSize: 16,
   },
   addSetButton: {
     borderRadius: Spacing.two,

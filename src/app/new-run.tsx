@@ -1,13 +1,13 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
 import { DateStepper } from '@/components/date-stepper';
 import { ThemedText } from '@/components/themed-text';
+import { ThemedTextInput } from '@/components/themed-text-input';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useRuns } from '@/hooks/use-runs';
-import { useTheme } from '@/hooks/use-theme';
 
 function formatPace(distanceKm: number, durationMinutes: number) {
   if (distanceKm <= 0) return '–';
@@ -18,7 +18,6 @@ function formatPace(distanceKm: number, durationMinutes: number) {
 }
 
 export default function NewRunScreen() {
-  const theme = useTheme();
   const { addRun } = useRuns();
 
   const [date, setDate] = useState(new Date());
@@ -57,21 +56,11 @@ export default function NewRunScreen() {
       <ThemedView style={styles.row}>
         <ThemedView style={[styles.field, styles.flex1]}>
           <ThemedText type="small">Distanz (km)</ThemedText>
-          <TextInput
-            style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-            keyboardType="numeric"
-            value={distance}
-            onChangeText={setDistance}
-          />
+          <ThemedTextInput keyboardType="numeric" value={distance} onChangeText={setDistance} />
         </ThemedView>
         <ThemedView style={[styles.field, styles.flex1]}>
           <ThemedText type="small">Dauer (min)</ThemedText>
-          <TextInput
-            style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-            keyboardType="numeric"
-            value={duration}
-            onChangeText={setDuration}
-          />
+          <ThemedTextInput keyboardType="numeric" value={duration} onChangeText={setDuration} />
         </ThemedView>
       </ThemedView>
 
@@ -120,13 +109,6 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: Spacing.two,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    fontSize: 16,
   },
   paceCard: {
     gap: Spacing.one,

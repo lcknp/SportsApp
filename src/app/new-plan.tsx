@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
 import { ExercisePicker } from '@/components/exercise-picker';
 import {
@@ -9,14 +9,13 @@ import {
   type EditableExercise,
 } from '@/components/exercise-set-list';
 import { ThemedText } from '@/components/themed-text';
+import { ThemedTextInput } from '@/components/themed-text-input';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { useTheme } from '@/hooks/use-theme';
 import { useTrainingPlans } from '@/hooks/use-training-plans';
 import type { Exercise, SetEntry } from '@/types/database';
 
 export default function NewPlanScreen() {
-  const theme = useTheme();
   const { createPlan } = useTrainingPlans();
 
   const [name, setName] = useState('');
@@ -81,13 +80,7 @@ export default function NewPlanScreen() {
 
       <ThemedView style={styles.field}>
         <ThemedText type="small">Name der Einheit</ThemedText>
-        <TextInput
-          style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-          placeholder="z.B. Oberkörper, Push, Beine …"
-          placeholderTextColor={theme.textSecondary}
-          value={name}
-          onChangeText={setName}
-        />
+        <ThemedTextInput placeholder="z.B. Oberkörper, Push, Beine …" value={name} onChangeText={setName} />
       </ThemedView>
 
       <ExerciseSetList exercises={exercises} onChange={setExercises} />
@@ -137,13 +130,6 @@ const styles = StyleSheet.create({
   },
   field: {
     gap: Spacing.two,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    fontSize: 16,
   },
   button: {
     borderRadius: Spacing.two,

@@ -2,12 +2,13 @@ import { addDays, addMonths, format, isToday } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LineChart } from '@/components/line-chart';
 import { MacroProgress } from '@/components/macro-progress';
 import { ThemedText } from '@/components/themed-text';
+import { ThemedTextInput } from '@/components/themed-text-input';
 import { ThemedView } from '@/components/themed-view';
 import { TrainingCalendar } from '@/components/training-calendar';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
@@ -16,7 +17,6 @@ import { useMacroHistory } from '@/hooks/use-macro-history';
 import { useProfile } from '@/hooks/use-profile';
 import { useRuns } from '@/hooks/use-runs';
 import { useStepCount } from '@/hooks/use-step-count';
-import { useTheme } from '@/hooks/use-theme';
 import { useTrainingSessions } from '@/hooks/use-training-sessions';
 import { useWeights } from '@/hooks/use-weights';
 import { useWorkoutSessions } from '@/hooks/use-workout-sessions';
@@ -24,7 +24,6 @@ import { useWorkoutSessions } from '@/hooks/use-workout-sessions';
 const DATE_FORMAT = 'yyyy-MM-dd';
 
 export default function DashboardScreen() {
-  const theme = useTheme();
   const insets = useSafeAreaInsets();
   const today = new Date();
 
@@ -219,30 +218,15 @@ export default function DashboardScreen() {
               <ThemedView style={styles.row}>
                 <ThemedView style={[styles.field, styles.flex1]}>
                   <ThemedText type="small">Protein (g)</ThemedText>
-                  <TextInput
-                    style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-                    keyboardType="numeric"
-                    value={protein}
-                    onChangeText={setProtein}
-                  />
+                  <ThemedTextInput keyboardType="numeric" value={protein} onChangeText={setProtein} />
                 </ThemedView>
                 <ThemedView style={[styles.field, styles.flex1]}>
                   <ThemedText type="small">Kohlenhydrate (g)</ThemedText>
-                  <TextInput
-                    style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-                    keyboardType="numeric"
-                    value={carbs}
-                    onChangeText={setCarbs}
-                  />
+                  <ThemedTextInput keyboardType="numeric" value={carbs} onChangeText={setCarbs} />
                 </ThemedView>
                 <ThemedView style={[styles.field, styles.flex1]}>
                   <ThemedText type="small">Fett (g)</ThemedText>
-                  <TextInput
-                    style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-                    keyboardType="numeric"
-                    value={fat}
-                    onChangeText={setFat}
-                  />
+                  <ThemedTextInput keyboardType="numeric" value={fat} onChangeText={setFat} />
                 </ThemedView>
               </ThemedView>
 
@@ -263,7 +247,7 @@ export default function DashboardScreen() {
                   style={({ pressed }) => [styles.saveButton, styles.flex1, pressed && styles.pressed]}
                   disabled={isSavingMacros}
                   onPress={handleDeleteMacros}>
-                  <ThemedView type="background" style={styles.saveButtonInner}>
+                  <ThemedView type="backgroundSelected" style={styles.saveButtonInner}>
                     <ThemedText type="smallBold">Löschen</ThemedText>
                   </ThemedView>
                 </Pressable>
@@ -289,12 +273,7 @@ export default function DashboardScreen() {
               <ThemedView style={styles.row}>
                 <ThemedView style={[styles.field, styles.flex1]}>
                   <ThemedText type="small">Gewicht (kg)</ThemedText>
-                  <TextInput
-                    style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-                    keyboardType="numeric"
-                    value={weight}
-                    onChangeText={setWeight}
-                  />
+                  <ThemedTextInput keyboardType="numeric" value={weight} onChangeText={setWeight} />
                 </ThemedView>
               </ThemedView>
 
@@ -483,13 +462,6 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: Spacing.two,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    fontSize: 16,
   },
   saveButton: {
     borderRadius: Spacing.two,

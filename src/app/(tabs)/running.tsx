@@ -1,15 +1,16 @@
-import { differenceInCalendarDays, format } from 'date-fns';
-import { de } from 'date-fns/locale';
+import { differenceInCalendarDays } from 'date-fns';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CalendarBadge } from '@/components/calendar-badge';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useRuns } from '@/hooks/use-runs';
 import { useStrava } from '@/hooks/use-strava';
+import { groupByMonth } from '@/lib/month-groups';
 
 function formatPace(distanceKm: number, durationMinutes: number) {
   if (distanceKm <= 0) return '–';
@@ -72,7 +73,7 @@ export default function RunningScreen() {
     <ScrollView
       contentContainerStyle={[
         styles.contentContainer,
-        { paddingTop: insets.top + Spacing.three, paddingBottom: insets.bottom + BottomTabInset + Spacing.three },
+        { paddingTop: insets.top + Spacing.three, paddingBottom: insets.bottom + BottomTabInset + Spacing.six },
       ]}>
       <ThemedView style={styles.container}>
         <ThemedView style={styles.header}>
@@ -173,22 +174,36 @@ export default function RunningScreen() {
           </ThemedText>
         )}
 
-        {runs.map((run) => (
-          <ThemedView key={run.id} type="backgroundElement" style={styles.card}>
-            <ThemedView>
-              <ThemedText type="smallBold">{format(new Date(run.date), 'EEEE, d. MMMM', { locale: de })}</ThemedText>
+        {groupByMonth(runs, (run) => run.date).map((group) => (
+          <ThemedView key={group.label} style={styles.monthGroup}>
+            <ThemedView style={styles.monthHeader}>
+              <ThemedText type="smallBold" themeColor="textSecondary">
+                {group.label}
+              </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
-                {run.distance_km} km · {run.duration_minutes} min · {formatPace(run.distance_km, run.duration_minutes)}
-                {run.strava_id ? ' · via Strava' : ''}
+                {group.items.length} {group.items.length === 1 ? 'Lauf' : 'Läufe'}
               </ThemedText>
             </ThemedView>
-            <Pressable
-              style={({ pressed }) => pressed && styles.pressed}
-              onPress={() => deleteRun(run.id, run.date)}>
-              <ThemedText type="small" themeColor="textSecondary">
-                Löschen
-              </ThemedText>
-            </Pressable>
+
+            {group.items.map((run) => (
+              <ThemedView key={run.id} type="backgroundElement" style={styles.card}>
+                <CalendarBadge date={new Date(run.date)} />
+                <ThemedView style={styles.cardBody}>
+                  <ThemedText type="smallBold">{run.distance_km} km</ThemedText>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {run.duration_minutes} min · {formatPace(run.distance_km, run.duration_minutes)}
+                    {run.strava_id ? ' · via Strava' : ''}
+                  </ThemedText>
+                </ThemedView>
+                <Pressable
+                  style={({ pressed }) => pressed && styles.pressed}
+                  onPress={() => deleteRun(run.id, run.date)}>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Löschen
+                  </ThemedText>
+                </Pressable>
+              </ThemedView>
+            ))}
           </ThemedView>
         ))}
       </ThemedView>
@@ -260,12 +275,26 @@ const styles = StyleSheet.create({
   stat: {
     alignItems: 'center',
   },
-  card: {
+  monthGroup: {
+    gap: Spacing.two,
+  },
+  monthHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: Spacing.one,
+    marginTop: Spacing.two,
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
     padding: Spacing.three,
     borderRadius: Spacing.four,
+  },
+  cardBody: {
+    flex: 1,
+    gap: Spacing.half,
   },
   pressed: {
     opacity: 0.7,

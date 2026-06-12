@@ -1,8 +1,10 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
-import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { ResumeWorkoutBar } from '@/components/resume-workout-bar';
+import { ActiveWorkoutProvider } from '@/contexts/active-workout-context';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
+import { ThemePreferenceProvider, useThemePreference } from '@/contexts/theme-context';
 
 function RootNavigator() {
   const { session, isLoading } = useAuth();
@@ -40,14 +42,25 @@ function RootNavigator() {
   );
 }
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+function ThemedApp() {
+  const { scheme } = useThemePreference();
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
       <AuthProvider>
-        <AnimatedSplashOverlay />
-        <RootNavigator />
+        <ActiveWorkoutProvider>
+          <AnimatedSplashOverlay />
+          <RootNavigator />
+          <ResumeWorkoutBar />
+        </ActiveWorkoutProvider>
       </AuthProvider>
     </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <ThemePreferenceProvider>
+      <ThemedApp />
+    </ThemePreferenceProvider>
   );
 }

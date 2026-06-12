@@ -1,19 +1,26 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { ThemedTextInput } from '@/components/themed-text-input';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
+import { useThemePreference, type ThemePreference } from '@/contexts/theme-context';
 import { useProfile } from '@/hooks/use-profile';
-import { useTheme } from '@/hooks/use-theme';
 
 type Tab = 'settings' | 'goals';
 
+const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
+  { value: 'light', label: '☀️ Hell' },
+  { value: 'dark', label: '🌙 Dunkel' },
+  { value: 'system', label: '⚙️ System' },
+];
+
 export default function ProfileScreen() {
-  const theme = useTheme();
   const { session, signOut, updateEmail, updatePassword } = useAuth();
   const { profile, updateGoals, updateName } = useProfile();
+  const { preference, setPreference } = useThemePreference();
 
   const [tab, setTab] = useState<Tab>('settings');
 
@@ -116,15 +123,30 @@ export default function ProfileScreen() {
       {tab === 'settings' && (
         <>
           <ThemedView type="backgroundElement" style={styles.card}>
+            <ThemedText type="smallBold">Darstellung</ThemedText>
+            <ThemedView style={styles.themeRow}>
+              {THEME_OPTIONS.map((option) => (
+                <Pressable
+                  key={option.value}
+                  style={({ pressed }) => [styles.themeOption, pressed && styles.pressed]}
+                  onPress={() => setPreference(option.value)}>
+                  <ThemedView
+                    type={preference === option.value ? 'backgroundSelected' : 'backgroundElement'}
+                    style={styles.themeOptionInner}>
+                    <ThemedText type="smallBold">{option.label}</ThemedText>
+                  </ThemedView>
+                </Pressable>
+              ))}
+            </ThemedView>
+            <ThemedText type="small" themeColor="textSecondary">
+              „System" folgt automatisch der Einstellung deines Geräts.
+            </ThemedText>
+          </ThemedView>
+
+          <ThemedView type="backgroundElement" style={styles.card}>
             <ThemedText type="smallBold">Name</ThemedText>
             <ThemedView style={styles.field}>
-              <TextInput
-                style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-                placeholder="Dein Name"
-                placeholderTextColor={theme.textSecondary}
-                value={name}
-                onChangeText={setName}
-              />
+              <ThemedTextInput placeholder="Dein Name" value={name} onChangeText={setName} />
             </ThemedView>
             {nameMessage && <ThemedText type="small">{nameMessage}</ThemedText>}
             <Pressable
@@ -140,8 +162,7 @@ export default function ProfileScreen() {
           <ThemedView type="backgroundElement" style={styles.card}>
             <ThemedText type="smallBold">E-Mail-Adresse</ThemedText>
             <ThemedView style={styles.field}>
-              <TextInput
-                style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
+              <ThemedTextInput
                 keyboardType="email-address"
                 autoCapitalize="none"
                 value={email}
@@ -162,10 +183,8 @@ export default function ProfileScreen() {
           <ThemedView type="backgroundElement" style={styles.card}>
             <ThemedText type="smallBold">Passwort</ThemedText>
             <ThemedView style={styles.field}>
-              <TextInput
-                style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
+              <ThemedTextInput
                 placeholder="Neues Passwort"
-                placeholderTextColor={theme.textSecondary}
                 secureTextEntry
                 value={password}
                 onChangeText={setPassword}
@@ -196,42 +215,22 @@ export default function ProfileScreen() {
 
           <ThemedView style={styles.field}>
             <ThemedText type="small">Kalorien (kcal)</ThemedText>
-            <TextInput
-              style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-              keyboardType="numeric"
-              value={calories}
-              onChangeText={setCalories}
-            />
+            <ThemedTextInput keyboardType="numeric" value={calories} onChangeText={setCalories} />
           </ThemedView>
 
           <ThemedView style={styles.field}>
             <ThemedText type="small">Protein (g)</ThemedText>
-            <TextInput
-              style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-              keyboardType="numeric"
-              value={protein}
-              onChangeText={setProtein}
-            />
+            <ThemedTextInput keyboardType="numeric" value={protein} onChangeText={setProtein} />
           </ThemedView>
 
           <ThemedView style={styles.field}>
             <ThemedText type="small">Kohlenhydrate (g)</ThemedText>
-            <TextInput
-              style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-              keyboardType="numeric"
-              value={carbs}
-              onChangeText={setCarbs}
-            />
+            <ThemedTextInput keyboardType="numeric" value={carbs} onChangeText={setCarbs} />
           </ThemedView>
 
           <ThemedView style={styles.field}>
             <ThemedText type="small">Fett (g)</ThemedText>
-            <TextInput
-              style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-              keyboardType="numeric"
-              value={fat}
-              onChangeText={setFat}
-            />
+            <ThemedTextInput keyboardType="numeric" value={fat} onChangeText={setFat} />
           </ThemedView>
 
           {goalsMessage && <ThemedText type="small">{goalsMessage}</ThemedText>}
@@ -270,6 +269,19 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     borderRadius: Spacing.three,
   },
+  themeRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  themeOption: {
+    flex: 1,
+    borderRadius: Spacing.two,
+  },
+  themeOptionInner: {
+    alignItems: 'center',
+    paddingVertical: Spacing.two,
+    borderRadius: Spacing.two,
+  },
   card: {
     gap: Spacing.three,
     padding: Spacing.three,
@@ -277,13 +289,6 @@ const styles = StyleSheet.create({
   },
   field: {
     gap: Spacing.one,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    fontSize: 16,
   },
   button: {
     borderRadius: Spacing.two,

@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
+import { ThemedTextInput } from '@/components/themed-text-input';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
@@ -38,19 +39,15 @@ export default function LoginScreen() {
         </ThemedText>
 
         <ThemedView type="backgroundElement" style={styles.form}>
-          <TextInput
-            style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
+          <ThemedTextInput
             placeholder="E-Mail"
-            placeholderTextColor={theme.textSecondary}
             autoCapitalize="none"
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
           />
-          <TextInput
-            style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
+          <ThemedTextInput
             placeholder="Passwort"
-            placeholderTextColor={theme.textSecondary}
             secureTextEntry
             value={password}
             onChangeText={setPassword}
@@ -115,13 +112,6 @@ const styles = StyleSheet.create({
     gap: Spacing.three,
     padding: Spacing.four,
     borderRadius: Spacing.four,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    fontSize: 16,
   },
   button: {
     alignItems: 'center',

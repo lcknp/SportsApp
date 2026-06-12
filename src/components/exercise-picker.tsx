@@ -1,13 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, TextInput } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
 import { ThemedText } from './themed-text';
+import { ThemedTextInput } from './themed-text-input';
 import { ThemedView } from './themed-view';
 
 import { EXERCISE_CATEGORIES } from '@/constants/exercise-categories';
 import { Spacing } from '@/constants/theme';
 import { useExercises } from '@/hooks/use-exercises';
-import { useTheme } from '@/hooks/use-theme';
 import type { Exercise, ExerciseCategory } from '@/types/database';
 
 type ExercisePickerProps = {
@@ -15,7 +15,6 @@ type ExercisePickerProps = {
 };
 
 export function ExercisePicker({ onSelect }: ExercisePickerProps) {
-  const theme = useTheme();
   const { exercises, addExercise, deleteExercise } = useExercises();
 
   const [categoryFilter, setCategoryFilter] = useState<ExerciseCategory | null>(null);
@@ -77,70 +76,65 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
     }
   }
 
+  function Chip({ label, selected, danger, onPress }: { label: string; selected?: boolean; danger?: boolean; onPress: () => void }) {
+    return (
+      <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={onPress}>
+        <ThemedView type={selected ? 'accent' : 'backgroundSelected'} style={styles.chip}>
+          <ThemedText
+            type="small"
+            themeColor={selected ? 'accentText' : 'text'}
+            style={danger ? styles.deleteText : undefined}>
+            {label}
+          </ThemedText>
+        </ThemedView>
+      </Pressable>
+    );
+  }
+
   return (
     <ThemedView type="backgroundElement" style={styles.picker}>
-      <TextInput
-        style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
-        placeholder="Übung suchen …"
-        placeholderTextColor={theme.textSecondary}
-        value={searchText}
-        onChangeText={setSearchText}
-      />
+      <ThemedTextInput placeholder="Übung suchen …" value={searchText} onChangeText={setSearchText} />
 
       <ThemedView style={styles.chipRow}>
-        <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={() => setCategoryFilter(null)}>
-          <ThemedView type={categoryFilter === null ? 'backgroundSelected' : 'background'} style={styles.chip}>
-            <ThemedText type="small">Alle</ThemedText>
-          </ThemedView>
-        </Pressable>
+        <Chip label="Alle" selected={categoryFilter === null} onPress={() => setCategoryFilter(null)} />
         {EXERCISE_CATEGORIES.map((category) => (
-          <Pressable
+          <Chip
             key={category}
-            style={({ pressed }) => pressed && styles.pressed}
-            onPress={() => setCategoryFilter(category)}>
-            <ThemedView
-              type={categoryFilter === category ? 'backgroundSelected' : 'background'}
-              style={styles.chip}>
-              <ThemedText type="small">{category}</ThemedText>
-            </ThemedView>
-          </Pressable>
+            label={category}
+            selected={categoryFilter === category}
+            onPress={() => setCategoryFilter(category)}
+          />
         ))}
       </ThemedView>
 
       <ThemedView style={styles.chipRow}>
         {filteredExercises.map((exercise) => (
-          <Pressable
+          <Chip
             key={exercise.id}
-            style={({ pressed }) => pressed && styles.pressed}
-            onPress={() => handleChipPress(exercise)}>
-            <ThemedView type="background" style={styles.chip}>
-              <ThemedText type="small" style={isManaging && pendingDeleteId === exercise.id ? styles.deleteText : undefined}>
-                {isManaging
-                  ? pendingDeleteId === exercise.id
-                    ? `Wirklich löschen: ${exercise.name}?`
-                    : `✕ ${exercise.name}`
-                  : exercise.name}
-              </ThemedText>
-            </ThemedView>
-          </Pressable>
+            label={
+              isManaging
+                ? pendingDeleteId === exercise.id
+                  ? `Wirklich löschen: ${exercise.name}?`
+                  : `✕ ${exercise.name}`
+                : exercise.name
+            }
+            danger={isManaging && pendingDeleteId === exercise.id}
+            onPress={() => handleChipPress(exercise)}
+          />
         ))}
-        <Pressable
-          style={({ pressed }) => pressed && styles.pressed}
-          onPress={() => setShowNewExerciseForm((current) => !current)}>
-          <ThemedView type={showNewExerciseForm ? 'backgroundSelected' : 'background'} style={styles.chip}>
-            <ThemedText type="small">+ Neue Übung</ThemedText>
-          </ThemedView>
-        </Pressable>
-        <Pressable
-          style={({ pressed }) => pressed && styles.pressed}
+        <Chip
+          label="+ Neue Übung"
+          selected={showNewExerciseForm}
+          onPress={() => setShowNewExerciseForm((current) => !current)}
+        />
+        <Chip
+          label={isManaging ? 'Fertig' : 'Übungen löschen'}
+          selected={isManaging}
           onPress={() => {
             setIsManaging((current) => !current);
             setPendingDeleteId(null);
-          }}>
-          <ThemedView type={isManaging ? 'backgroundSelected' : 'background'} style={styles.chip}>
-            <ThemedText type="small">{isManaging ? 'Fertig' : 'Übungen löschen'}</ThemedText>
-          </ThemedView>
-        </Pressable>
+          }}
+        />
       </ThemedView>
 
       {isManaging && (
@@ -153,25 +147,19 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
 
       {showNewExerciseForm && (
         <ThemedView style={styles.field}>
-          <TextInput
-            style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
+          <ThemedTextInput
             placeholder="Name der Übung"
-            placeholderTextColor={theme.textSecondary}
             value={newExerciseName}
             onChangeText={setNewExerciseName}
           />
           <ThemedView style={styles.chipRow}>
             {EXERCISE_CATEGORIES.map((category) => (
-              <Pressable
+              <Chip
                 key={category}
-                style={({ pressed }) => pressed && styles.pressed}
-                onPress={() => setNewExerciseCategory(category)}>
-                <ThemedView
-                  type={newExerciseCategory === category ? 'backgroundSelected' : 'background'}
-                  style={styles.chip}>
-                  <ThemedText type="small">{category}</ThemedText>
-                </ThemedView>
-              </Pressable>
+                label={category}
+                selected={newExerciseCategory === category}
+                onPress={() => setNewExerciseCategory(category)}
+              />
             ))}
           </ThemedView>
           <Pressable style={({ pressed }) => [styles.button, pressed && styles.pressed]} onPress={handleCreateExercise}>
@@ -210,13 +198,6 @@ const styles = StyleSheet.create({
   },
   field: {
     gap: Spacing.two,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    fontSize: 16,
   },
   button: {
     borderRadius: Spacing.two,

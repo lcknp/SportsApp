@@ -1,16 +1,15 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { Pressable, ScrollView, StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { ThemedTextInput } from '@/components/themed-text-input';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { usePlanGroups } from '@/hooks/use-plan-groups';
-import { useTheme } from '@/hooks/use-theme';
 import { useTrainingPlans } from '@/hooks/use-training-plans';
 import { combineVolumes, planVolume, sortedTargets } from '@/lib/volume';
 
 export default function VolumeScreen() {
-  const theme = useTheme();
   const { plans, setPlanGroup } = useTrainingPlans();
   const { groups, createGroup, deleteGroup } = usePlanGroups();
 
@@ -41,10 +40,9 @@ export default function VolumeScreen() {
       </ThemedText>
 
       <ThemedView style={styles.row}>
-        <TextInput
-          style={[styles.input, styles.flex1, { color: theme.text, borderColor: theme.backgroundSelected }]}
+        <ThemedTextInput
+          style={styles.flex1}
           placeholder="Neue Gruppe (z.B. Push/Pull/Beine)"
-          placeholderTextColor={theme.textSecondary}
           value={newGroupName}
           onChangeText={setNewGroupName}
         />
@@ -125,7 +123,7 @@ export default function VolumeScreen() {
                       key={plan.id}
                       style={({ pressed }) => pressed && styles.pressed}
                       onPress={() => setPlanGroup(plan.id, group.id)}>
-                      <ThemedView type="background" style={styles.chip}>
+                      <ThemedView type="backgroundSelected" style={styles.chip}>
                         <ThemedText type="small">+ {plan.name}</ThemedText>
                       </ThemedView>
                     </Pressable>
@@ -182,13 +180,6 @@ const styles = StyleSheet.create({
   },
   flex1: {
     flex: 1,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: Spacing.two,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
-    fontSize: 16,
   },
   button: {
     borderRadius: Spacing.two,
