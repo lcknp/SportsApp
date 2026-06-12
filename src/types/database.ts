@@ -83,6 +83,8 @@ export type Run = {
   date: string;
   distance_km: number;
   duration_minutes: number;
+  // gesetzt = automatisch von Strava importiert
+  strava_id?: number | null;
   created_at: string;
 };
 

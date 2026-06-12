@@ -27,6 +27,7 @@ function RootNavigator() {
           name="volume"
           options={{ presentation: 'modal', headerShown: true, title: 'Volumen-Übersicht' }}
         />
+        <Stack.Screen name="strava-callback" />
         <Stack.Screen
           name="new-run"
           options={{ presentation: 'modal', headerShown: true, title: 'Lauf eintragen' }}

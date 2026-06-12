@@ -1,14 +1,15 @@
-import { format } from 'date-fns';
+import { differenceInCalendarDays, format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback } from 'react';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useRuns } from '@/hooks/use-runs';
+import { useStrava } from '@/hooks/use-strava';
 
 function formatPace(distanceKm: number, durationMinutes: number) {
   if (distanceKm <= 0) return '–';
@@ -21,12 +22,51 @@ function formatPace(distanceKm: number, durationMinutes: number) {
 export default function RunningScreen() {
   const insets = useSafeAreaInsets();
   const { runs, deleteRun, refresh } = useRuns();
+  const { isConfigured, isConnected, isSyncing, connect, sync, disconnect } = useStrava();
+
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const autoSyncedRef = useRef(false);
+
+  const handleSync = useCallback(
+    async (silent: boolean) => {
+      if (!silent) setSyncMessage(null);
+      const result = await sync();
+      if (result.error) {
+        if (!silent) setSyncMessage('Fehler: ' + result.error);
+        return;
+      }
+      const imported = result.imported ?? 0;
+      if (imported > 0) {
+        await refresh();
+      }
+      if (!silent) {
+        setSyncMessage(
+          imported > 0
+            ? `${imported} ${imported === 1 ? 'neuer Lauf' : 'neue Läufe'} importiert.`
+            : 'Alles aktuell — keine neuen Läufe.',
+        );
+      } else if (imported > 0) {
+        setSyncMessage(`${imported} ${imported === 1 ? 'neuer Lauf' : 'neue Läufe'} von Strava importiert.`);
+      }
+    },
+    [sync, refresh],
+  );
 
   useFocusEffect(
     useCallback(() => {
       refresh();
-    }, [refresh]),
+      // Einmal pro App-Sitzung still im Hintergrund syncen
+      if (isConnected && !autoSyncedRef.current) {
+        autoSyncedRef.current = true;
+        handleSync(true);
+      }
+    }, [refresh, isConnected, handleSync]),
   );
+
+  // Statistik der letzten 30 Tage
+  const recentRuns = runs.filter((run) => differenceInCalendarDays(new Date(), new Date(run.date)) <= 30);
+  const recentKm = recentRuns.reduce((sum, run) => sum + Number(run.distance_km), 0);
+  const recentMinutes = recentRuns.reduce((sum, run) => sum + Number(run.duration_minutes), 0);
 
   return (
     <ScrollView
@@ -46,6 +86,87 @@ export default function RunningScreen() {
           </Pressable>
         </ThemedView>
 
+        {isConfigured && (
+          <ThemedView type="backgroundElement" style={styles.stravaCard}>
+            {isConnected ? (
+              <>
+                <ThemedView style={styles.stravaRow}>
+                  <ThemedText type="smallBold">✓ Strava verbunden</ThemedText>
+                  <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={disconnect}>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Trennen
+                    </ThemedText>
+                  </Pressable>
+                </ThemedView>
+                <Pressable
+                  style={({ pressed }) => [styles.stravaButton, pressed && styles.pressed]}
+                  disabled={isSyncing}
+                  onPress={() => handleSync(false)}>
+                  <ThemedView type="accent" style={styles.stravaButtonInner}>
+                    <ThemedText type="smallBold" themeColor="accentText">
+                      {isSyncing ? 'Synchronisiere …' : 'Läufe von Strava importieren'}
+                    </ThemedText>
+                  </ThemedView>
+                </Pressable>
+                {syncMessage && <ThemedText type="small">{syncMessage}</ThemedText>}
+              </>
+            ) : Platform.OS === 'web' ? (
+              <>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Verbinde Strava, dann landen deine Läufe automatisch hier — ohne Tipparbeit.
+                </ThemedText>
+                <Pressable style={({ pressed }) => [styles.stravaButton, pressed && styles.pressed]} onPress={connect}>
+                  <ThemedView style={[styles.stravaButtonInner, styles.stravaBrand]}>
+                    <ThemedText type="smallBold" style={styles.stravaBrandText}>
+                      Mit Strava verbinden
+                    </ThemedText>
+                  </ThemedView>
+                </Pressable>
+              </>
+            ) : (
+              <ThemedText type="small" themeColor="textSecondary">
+                Strava verbinden geht einmalig im Browser (Web-App) — danach funktioniert der Sync
+                auch hier.
+              </ThemedText>
+            )}
+            <ThemedText type="small" themeColor="textSecondary" style={styles.poweredBy}>
+              Powered by Strava
+            </ThemedText>
+          </ThemedView>
+        )}
+
+        {recentRuns.length > 0 && (
+          <ThemedView type="backgroundElement" style={styles.statsCard}>
+            <ThemedText type="smallBold">Letzte 30 Tage</ThemedText>
+            <ThemedView style={styles.statsRow}>
+              <ThemedView style={styles.stat}>
+                <ThemedText type="title" themeColor="accent">
+                  {recentRuns.length}
+                </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Läufe
+                </ThemedText>
+              </ThemedView>
+              <ThemedView style={styles.stat}>
+                <ThemedText type="title" themeColor="accent">
+                  {recentKm.toFixed(1)}
+                </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  km
+                </ThemedText>
+              </ThemedView>
+              <ThemedView style={styles.stat}>
+                <ThemedText type="title" themeColor="accent">
+                  {formatPace(recentKm, recentMinutes).replace(' min/km', '')}
+                </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Ø Pace
+                </ThemedText>
+              </ThemedView>
+            </ThemedView>
+          </ThemedView>
+        )}
+
         {runs.length === 0 && (
           <ThemedText type="small" themeColor="textSecondary">
             Noch keine Läufe eingetragen.
@@ -58,6 +179,7 @@ export default function RunningScreen() {
               <ThemedText type="smallBold">{format(new Date(run.date), 'EEEE, d. MMMM', { locale: de })}</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 {run.distance_km} km · {run.duration_minutes} min · {formatPace(run.distance_km, run.duration_minutes)}
+                {run.strava_id ? ' · via Strava' : ''}
               </ThemedText>
             </ThemedView>
             <Pressable
@@ -98,6 +220,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     borderRadius: Spacing.three,
+  },
+  stravaCard: {
+    gap: Spacing.two,
+    padding: Spacing.three,
+    borderRadius: Spacing.four,
+  },
+  stravaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  stravaButton: {
+    borderRadius: Spacing.two,
+  },
+  stravaButtonInner: {
+    alignItems: 'center',
+    paddingVertical: Spacing.three,
+    borderRadius: Spacing.two,
+  },
+  stravaBrand: {
+    backgroundColor: '#FC5200',
+  },
+  stravaBrandText: {
+    color: '#ffffff',
+  },
+  poweredBy: {
+    textAlign: 'right',
+  },
+  statsCard: {
+    gap: Spacing.two,
+    padding: Spacing.three,
+    borderRadius: Spacing.four,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  stat: {
+    alignItems: 'center',
   },
   card: {
     flexDirection: 'row',

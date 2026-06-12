@@ -242,7 +242,8 @@ create index if not exists training_plan_exercises_plan_idx
   on public.training_plan_exercises (plan_id);
 
 -- ---------------------------------------------------------------------------
--- Runs: Läufe mit Distanz und Dauer
+-- Runs: Läufe mit Distanz und Dauer.
+-- strava_id gesetzt = automatisch von Strava importiert (Duplikat-Schutz).
 -- ---------------------------------------------------------------------------
 create table if not exists public.runs (
   id uuid primary key default gen_random_uuid(),
@@ -250,8 +251,13 @@ create table if not exists public.runs (
   date date not null,
   distance_km numeric not null default 0,
   duration_minutes numeric not null default 0,
+  strava_id bigint,
   created_at timestamptz not null default now()
 );
+
+alter table public.runs add column if not exists strava_id bigint;
+
+create unique index if not exists runs_strava_id_idx on public.runs (strava_id);
 
 alter table public.runs enable row level security;
 
@@ -311,6 +317,28 @@ create policy "Users manage their own weights"
 
 create index if not exists weights_user_date_idx
   on public.weights (user_id, date);
+
+-- ---------------------------------------------------------------------------
+-- Strava: OAuth-Tokens pro Account (werden nur von den Edge Functions benutzt)
+-- ---------------------------------------------------------------------------
+create table if not exists public.strava_accounts (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  athlete_id bigint,
+  access_token text not null,
+  refresh_token text not null,
+  expires_at bigint not null default 0,
+  last_sync_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+alter table public.strava_accounts enable row level security;
+
+drop policy if exists "Users manage their own strava account" on public.strava_accounts;
+create policy "Users manage their own strava account"
+  on public.strava_accounts
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
 -- ---------------------------------------------------------------------------
 -- Hinweis: Die Tabelle food_logs aus Phase 1 wird von der App nicht mehr
