@@ -26,13 +26,23 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
   );
   const [isManaging, setIsManaging] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [searchText, setSearchText] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const filteredExercises = useMemo(
-    () =>
-      categoryFilter ? exercises.filter((exercise) => exercise.category === categoryFilter) : exercises,
-    [exercises, categoryFilter],
-  );
+  const filteredExercises = useMemo(() => {
+    let list = categoryFilter
+      ? exercises.filter((exercise) => exercise.category === categoryFilter)
+      : exercises;
+    const query = searchText.trim().toLowerCase();
+    if (query) {
+      list = list.filter((exercise) => exercise.name.toLowerCase().includes(query));
+    }
+    // Im Verwalten-Modus nur eigene Übungen — Standard-Übungen sind nicht löschbar.
+    if (isManaging) {
+      list = list.filter((exercise) => exercise.user_id !== null);
+    }
+    return list;
+  }, [exercises, categoryFilter, searchText, isManaging]);
 
   async function handleChipPress(exercise: Exercise) {
     if (!isManaging) {
@@ -69,6 +79,14 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
 
   return (
     <ThemedView type="backgroundElement" style={styles.picker}>
+      <TextInput
+        style={[styles.input, { color: theme.text, borderColor: theme.backgroundSelected }]}
+        placeholder="Übung suchen …"
+        placeholderTextColor={theme.textSecondary}
+        value={searchText}
+        onChangeText={setSearchText}
+      />
+
       <ThemedView style={styles.chipRow}>
         <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={() => setCategoryFilter(null)}>
           <ThemedView type={categoryFilter === null ? 'backgroundSelected' : 'background'} style={styles.chip}>
@@ -127,8 +145,9 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
 
       {isManaging && (
         <ThemedText type="small" themeColor="textSecondary">
-          Tippe eine Übung an und bestätige mit einem zweiten Tipp. Achtung: Die Übung wird dabei
-          auch aus gespeicherten Trainings und Einheiten entfernt.
+          Nur selbst erstellte Übungen werden angezeigt — Standard-Übungen lassen sich nicht
+          löschen. Tippe eine Übung an und bestätige mit einem zweiten Tipp. Achtung: Die Übung
+          wird dabei auch aus gespeicherten Trainings und Einheiten entfernt.
         </ThemedText>
       )}
 

@@ -47,9 +47,12 @@ export type ExerciseCategory =
 
 export type Exercise = {
   id: string;
-  user_id: string;
+  // null = globale Standard-Übung, sichtbar für alle Accounts
+  user_id: string | null;
   name: string;
   category: ExerciseCategory;
+  video_url?: string | null;
+  target?: string | null;
   created_at: string;
 };
 

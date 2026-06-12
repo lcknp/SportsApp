@@ -18,10 +18,10 @@ export function useExercises() {
       return;
     }
     setIsLoading(true);
+    // RLS liefert globale Übungen (user_id null) plus die eigenen.
     const { data, error } = await supabase
       .from('exercises')
       .select('*')
-      .eq('user_id', userId)
       .order('name', { ascending: true });
     if (!error) {
       setExercises(data);

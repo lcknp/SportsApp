@@ -74,6 +74,8 @@ export default function ActiveTrainingScreen() {
           return {
             exercise_id: planExercise.exercise_id,
             name: planExercise.exercise?.name ?? '',
+            video_url: planExercise.exercise?.video_url,
+            target: planExercise.exercise?.target,
             sets: entries.length > 0 ? toDraftSets(entries) : [{ ...DEFAULT_DRAFT_SET }],
           };
         }),
@@ -94,6 +96,8 @@ export default function ActiveTrainingScreen() {
       {
         exercise_id: exercise.id,
         name: exercise.name,
+        video_url: exercise.video_url,
+        target: exercise.target,
         sets: lastEntries ? toDraftSets(lastEntries) : [{ ...DEFAULT_DRAFT_SET }],
       },
     ]);

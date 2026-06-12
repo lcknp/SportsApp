@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, TextInput } from 'react-native';
 
+import { ExerciseVideoButton } from './exercise-video';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
 
@@ -11,6 +12,8 @@ export type DraftSet = { reps: string; weight_kg: string };
 export type EditableExercise = {
   exercise_id: string;
   name: string;
+  video_url?: string | null;
+  target?: string | null;
   sets: DraftSet[];
 };
 
@@ -66,14 +69,24 @@ export function ExerciseSetList({ exercises, onChange }: ExerciseSetListProps) {
       {exercises.map((exercise, exerciseIndex) => (
         <ThemedView key={`${exercise.exercise_id}-${exerciseIndex}`} type="backgroundElement" style={styles.card}>
           <ThemedView style={styles.cardHeader}>
-            <ThemedText type="smallBold">{exercise.name}</ThemedText>
-            <Pressable
-              style={({ pressed }) => pressed && styles.pressed}
-              onPress={() => removeExercise(exerciseIndex)}>
-              <ThemedText type="small" themeColor="textSecondary">
-                Entfernen
-              </ThemedText>
-            </Pressable>
+            <ThemedView style={styles.cardTitle}>
+              <ThemedText type="smallBold">{exercise.name}</ThemedText>
+              {exercise.target ? (
+                <ThemedText type="small" themeColor="textSecondary">
+                  {exercise.target}
+                </ThemedText>
+              ) : null}
+            </ThemedView>
+            <ThemedView style={styles.cardActions}>
+              {exercise.video_url ? <ExerciseVideoButton url={exercise.video_url} /> : null}
+              <Pressable
+                style={({ pressed }) => pressed && styles.pressed}
+                onPress={() => removeExercise(exerciseIndex)}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Entfernen
+                </ThemedText>
+              </Pressable>
+            </ThemedView>
           </ThemedView>
 
           {exercise.sets.map((set, setIndex) => (
@@ -130,6 +143,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: Spacing.two,
+  },
+  cardTitle: {
+    flexShrink: 1,
+    gap: Spacing.half,
+  },
+  cardActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
   },
   setRow: {
     flexDirection: 'row',

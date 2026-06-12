@@ -31,6 +31,8 @@ export default function NewPlanScreen() {
       {
         exercise_id: exercise.id,
         name: exercise.name,
+        video_url: exercise.video_url,
+        target: exercise.target,
         sets: [{ ...DEFAULT_DRAFT_SET }, { ...DEFAULT_DRAFT_SET }, { ...DEFAULT_DRAFT_SET }],
       },
     ]);
