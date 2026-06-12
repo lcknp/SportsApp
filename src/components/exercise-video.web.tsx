@@ -31,7 +31,6 @@ export function ExerciseVideoButton({ url }: ExerciseVideoButtonProps) {
               src: toEmbedUrl(url),
               style: { width: '100%', height: '100%', border: 'none', borderRadius: 12 },
               allow: 'autoplay; encrypted-media; fullscreen',
-              allowFullScreen: true,
             })}
             <Pressable style={styles.closeButton} onPress={() => setIsOpen(false)}>
               <View style={styles.closeButtonInner}>
@@ -65,6 +64,8 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 720,
     aspectRatio: 16 / 9,
+    backgroundColor: '#000000',
+    borderRadius: 12,
   },
   closeButton: {
     position: 'absolute',

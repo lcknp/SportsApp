@@ -1,34 +1,9 @@
--- SportsApp Phase 8 schema additions
+-- SportsApp — globale Übungen (Seed)
 -- Generiert von scripts/generate-exercise-seed.mjs — nicht von Hand editieren.
--- Im Supabase SQL-Editor ausführen (mehrfach ausführbar, überschreibt nur globale Übungen).
+-- Voraussetzung: schema.sql wurde ausgeführt. Mehrfach ausführbar,
+-- überschreibt nur globale Übungen, nie selbst erstellte.
 
--- 1) Globale Übungen erlauben (user_id null = für alle Accounts sichtbar)
-alter table public.exercises alter column user_id drop not null;
-
--- 2) Neue Spalten: Video-Link und Target (feine Muskelgruppe)
-alter table public.exercises add column if not exists video_url text;
-alter table public.exercises add column if not exists target text;
-
--- 3) Zugriffsregeln: globale Übungen lesbar für alle, schreib-/löschbar nur eigene
-drop policy if exists "Users manage their own exercises" on public.exercises;
-drop policy if exists "Read global and own exercises" on public.exercises;
-drop policy if exists "Insert own exercises" on public.exercises;
-drop policy if exists "Update own exercises" on public.exercises;
-drop policy if exists "Delete own exercises" on public.exercises;
-create policy "Read global and own exercises" on public.exercises
-  for select using (user_id is null or auth.uid() = user_id);
-create policy "Insert own exercises" on public.exercises
-  for insert with check (auth.uid() = user_id);
-create policy "Update own exercises" on public.exercises
-  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
-create policy "Delete own exercises" on public.exercises
-  for delete using (auth.uid() = user_id);
-
--- 4) Eindeutiger Name für globale Übungen (macht das Seeding wiederholbar)
-create unique index if not exists exercises_global_name_idx
-  on public.exercises (name) where user_id is null;
-
--- 5) 293 globale Übungen einspielen
+-- 293 globale Übungen einspielen
 insert into public.exercises (user_id, name, category, video_url, target) values (null, 'Internal External', 'Sonstiges', 'https://drive.google.com/file/d/1Z9DwmJd9GXhYULFsTEwQK9armDH6HTgS/view?usp=drive_link', 'PRIMINGS') on conflict (name) where user_id is null do update set category = excluded.category, video_url = excluded.video_url, target = excluded.target;
 insert into public.exercises (user_id, name, category, video_url, target) values (null, 'Plank Rotation', 'Sonstiges', 'https://drive.google.com/file/d/1WtWp7aLzNouDuuUn-AtMLFu8gLjtA-re/view?usp=drive_link', 'PRIMINGS') on conflict (name) where user_id is null do update set category = excluded.category, video_url = excluded.video_url, target = excluded.target;
 insert into public.exercises (user_id, name, category, video_url, target) values (null, 'PNF Lounge', 'Sonstiges', 'https://drive.google.com/file/d/1i6nFbbutoYeCywuoJs6hCrFRGq2_DyH8/view?usp=drive_link', 'PRIMINGS') on conflict (name) where user_id is null do update set category = excluded.category, video_url = excluded.video_url, target = excluded.target;

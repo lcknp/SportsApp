@@ -1,4 +1,5 @@
-// Generiert supabase/schema_phase8.sql aus den Seed-JSONs in supabase/seed/.
+// Generiert supabase/seed_exercises.sql aus den Seed-JSONs in supabase/seed/.
+// Voraussetzung: supabase/schema.sql wurde bereits ausgeführt.
 // Ausführen mit: node scripts/generate-exercise-seed.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -54,37 +55,12 @@ for (const file of files) {
 const esc = (text) => text.replace(/'/g, "''");
 
 const lines = [];
-lines.push('-- SportsApp Phase 8 schema additions');
+lines.push('-- SportsApp — globale Übungen (Seed)');
 lines.push('-- Generiert von scripts/generate-exercise-seed.mjs — nicht von Hand editieren.');
-lines.push('-- Im Supabase SQL-Editor ausführen (mehrfach ausführbar, überschreibt nur globale Übungen).');
+lines.push('-- Voraussetzung: schema.sql wurde ausgeführt. Mehrfach ausführbar,');
+lines.push('-- überschreibt nur globale Übungen, nie selbst erstellte.');
 lines.push('');
-lines.push('-- 1) Globale Übungen erlauben (user_id null = für alle Accounts sichtbar)');
-lines.push('alter table public.exercises alter column user_id drop not null;');
-lines.push('');
-lines.push('-- 2) Neue Spalten: Video-Link und Target (feine Muskelgruppe)');
-lines.push('alter table public.exercises add column if not exists video_url text;');
-lines.push('alter table public.exercises add column if not exists target text;');
-lines.push('');
-lines.push('-- 3) Zugriffsregeln: globale Übungen lesbar für alle, schreib-/löschbar nur eigene');
-lines.push('drop policy if exists "Users manage their own exercises" on public.exercises;');
-lines.push('drop policy if exists "Read global and own exercises" on public.exercises;');
-lines.push('drop policy if exists "Insert own exercises" on public.exercises;');
-lines.push('drop policy if exists "Update own exercises" on public.exercises;');
-lines.push('drop policy if exists "Delete own exercises" on public.exercises;');
-lines.push('create policy "Read global and own exercises" on public.exercises');
-lines.push('  for select using (user_id is null or auth.uid() = user_id);');
-lines.push('create policy "Insert own exercises" on public.exercises');
-lines.push('  for insert with check (auth.uid() = user_id);');
-lines.push('create policy "Update own exercises" on public.exercises');
-lines.push('  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);');
-lines.push('create policy "Delete own exercises" on public.exercises');
-lines.push('  for delete using (auth.uid() = user_id);');
-lines.push('');
-lines.push('-- 4) Eindeutiger Name für globale Übungen (macht das Seeding wiederholbar)');
-lines.push('create unique index if not exists exercises_global_name_idx');
-lines.push('  on public.exercises (name) where user_id is null;');
-lines.push('');
-lines.push(`-- 5) ${byName.size} globale Übungen einspielen`);
+lines.push(`-- ${byName.size} globale Übungen einspielen`);
 
 for (const exercise of byName.values()) {
   const category = CATEGORY_BY_GROUP[exercise.muscle_groups[0]] ?? 'Sonstiges';
@@ -99,5 +75,5 @@ for (const exercise of byName.values()) {
 }
 lines.push('');
 
-writeFileSync(join(root, 'supabase/schema_phase8.sql'), lines.join('\n'), 'utf8');
-console.log(`schema_phase8.sql geschrieben: ${byName.size} Übungen.`);
+writeFileSync(join(root, 'supabase/seed_exercises.sql'), lines.join('\n'), 'utf8');
+console.log(`seed_exercises.sql geschrieben: ${byName.size} Übungen.`);
