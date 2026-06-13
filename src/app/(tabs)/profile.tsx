@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { FddbImport } from '@/components/fddb-import';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedTextInput } from '@/components/themed-text-input';
 import { ThemedView } from '@/components/themed-view';
@@ -245,6 +246,8 @@ export default function ProfileScreen() {
           </Pressable>
         </ThemedView>
       )}
+
+      {tab === 'goals' && <FddbImport />}
     </ScrollView>
   );
 }
