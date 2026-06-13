@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 
 import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/lib/supabase';
+import type { StravaDetail } from '@/types/database';
 
 const STRAVA_CLIENT_ID = process.env.EXPO_PUBLIC_STRAVA_CLIENT_ID;
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -88,11 +89,19 @@ export function useStrava() {
     return result;
   }
 
+  // Lädt Detail- + Verlaufsdaten für genau einen Lauf (wird beim Aufklappen
+  // aufgerufen). Das Ergebnis wird serverseitig in runs.strava_detail gecacht.
+  async function fetchActivityDetail(
+    runId: string,
+  ): Promise<{ detail?: StravaDetail; error?: string }> {
+    return callFunction('strava-activity', { runId });
+  }
+
   async function disconnect() {
     if (!userId) return;
     await supabase.from('strava_accounts').delete().eq('user_id', userId);
     await refresh();
   }
 
-  return { isConfigured, isConnected, lastSyncAt, isSyncing, connect, completeConnection, sync, disconnect, refresh };
+  return { isConfigured, isConnected, lastSyncAt, isSyncing, connect, completeConnection, sync, fetchActivityDetail, disconnect, refresh };
 }

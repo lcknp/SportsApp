@@ -257,6 +257,14 @@ create table if not exists public.runs (
 
 alter table public.runs add column if not exists strava_id bigint;
 
+-- Beim Sync befüllte Zusatzdaten aus der Aktivitäts-Übersicht (Höhenmeter, Puls,
+-- Trittfrequenz, Startzeit, …). Kein zusätzlicher Strava-Request nötig.
+alter table public.runs add column if not exists strava_stats jsonb;
+
+-- Erst beim Aufklappen eines Laufs geladen: Splits, Bestzeiten, Kalorien und
+-- Verlaufsdaten (Streams). Gecacht, damit ein erneutes Öffnen keinen API-Call kostet.
+alter table public.runs add column if not exists strava_detail jsonb;
+
 create unique index if not exists runs_strava_id_idx on public.runs (strava_id);
 
 alter table public.runs enable row level security;

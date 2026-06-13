@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
       return json({ imported: 0 });
     }
 
-    // Bereits importierte Läufe überspringen
+    // Welche Läufe gibt es schon? (für die Anzahl neuer Importe + Kalender-Einträge)
     const { data: existing } = await supabase
       .from('runs')
       .select('strava_id')
@@ -99,22 +99,45 @@ Deno.serve(async (req) => {
       .in('strava_id', stravaRuns.map((run) => run.id));
     const existingIds = new Set((existing ?? []).map((row) => Number(row.strava_id)));
 
-    const newRuns = stravaRuns
-      .filter((run) => !existingIds.has(Number(run.id)))
-      .map((run) => ({
-        user_id: user.id,
-        date: String(run.start_date_local ?? run.start_date).slice(0, 10),
-        distance_km: Math.round((run.distance / 1000) * 100) / 100,
-        duration_minutes: Math.round((run.moving_time / 60) * 10) / 10,
-        strava_id: run.id,
-      }));
+    // Zusatzdaten aus der Übersicht mitnehmen — kostet keinen extra Request.
+    function buildStats(run: any) {
+      return {
+        name: run.name ?? null,
+        started_at: run.start_date_local ?? run.start_date ?? null,
+        elapsed_minutes: run.elapsed_time != null ? Math.round((run.elapsed_time / 60) * 10) / 10 : null,
+        elevation_gain: run.total_elevation_gain ?? null,
+        avg_heartrate: run.average_heartrate ?? null,
+        max_heartrate: run.max_heartrate ?? null,
+        avg_cadence: run.average_cadence ?? null,
+        max_speed: run.max_speed ?? null,
+        suffer_score: run.suffer_score ?? null,
+        kudos_count: run.kudos_count ?? null,
+        achievement_count: run.achievement_count ?? null,
+        polyline: run.map?.summary_polyline ?? null,
+      };
+    }
 
+    // Upsert über strava_id: legt neue Läufe an und befüllt bei bereits
+    // importierten die Zusatzdaten nach (Backfill). strava_detail bleibt unberührt.
+    const rows = stravaRuns.map((run) => ({
+      user_id: user.id,
+      date: String(run.start_date_local ?? run.start_date).slice(0, 10),
+      distance_km: Math.round((run.distance / 1000) * 100) / 100,
+      duration_minutes: Math.round((run.moving_time / 60) * 10) / 10,
+      strava_id: run.id,
+      strava_stats: buildStats(run),
+    }));
+
+    const { error: upsertError } = await supabase
+      .from('runs')
+      .upsert(rows, { onConflict: 'strava_id' });
+    if (upsertError) {
+      return json({ error: upsertError.message }, 500);
+    }
+
+    // Kalender-Einträge nur für wirklich neue Läufe (wie bei der manuellen Eingabe)
+    const newRuns = rows.filter((row) => !existingIds.has(Number(row.strava_id)));
     if (newRuns.length > 0) {
-      const { error: insertError } = await supabase.from('runs').insert(newRuns);
-      if (insertError) {
-        return json({ error: insertError.message }, 500);
-      }
-      // Kalender-Einträge wie bei der manuellen Eingabe
       await supabase.from('workout_sessions').insert(
         newRuns.map((run) => ({ user_id: user.id, date: run.date, name: 'Lauf', completed: true })),
       );

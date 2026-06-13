@@ -77,6 +77,53 @@ export type TrainingSession = WorkoutSession & {
   session_exercises: SessionExercise[];
 };
 
+// Beim Sync aus der Aktivitäts-Übersicht befüllt (kein extra Strava-Request).
+export type StravaStats = {
+  name: string | null;
+  started_at: string | null;
+  elapsed_minutes: number | null;
+  elevation_gain: number | null;
+  avg_heartrate: number | null;
+  max_heartrate: number | null;
+  avg_cadence: number | null;
+  max_speed: number | null;
+  suffer_score: number | null;
+  kudos_count: number | null;
+  achievement_count: number | null;
+  polyline: string | null;
+};
+
+export type StravaSplit = {
+  km: number;
+  distance: number;
+  moving_time: number;
+  elevation_diff: number | null;
+  avg_speed: number | null;
+  avg_hr: number | null;
+};
+
+export type StravaBestEffort = {
+  name: string;
+  seconds: number;
+  distance: number;
+};
+
+export type StravaStreams = {
+  distance: number[];
+  altitude: number[];
+  heartrate: number[];
+  velocity: number[];
+  latlng: [number, number][];
+};
+
+// Erst beim Aufklappen geladen (Detail-/Stream-Abruf), danach gecacht.
+export type StravaDetail = {
+  calories: number | null;
+  splits: StravaSplit[];
+  best_efforts: StravaBestEffort[];
+  streams: StravaStreams;
+};
+
 export type Run = {
   id: string;
   user_id: string;
@@ -85,6 +132,8 @@ export type Run = {
   duration_minutes: number;
   // gesetzt = automatisch von Strava importiert
   strava_id?: number | null;
+  strava_stats?: StravaStats | null;
+  strava_detail?: StravaDetail | null;
   created_at: string;
 };
 
