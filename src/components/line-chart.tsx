@@ -79,26 +79,26 @@ export function LineChart({ title, series, labels, height = 140 }: LineChartProp
             </Svg>
           </View>
 
-          <ThemedView style={styles.legend}>
+          <View style={styles.legend}>
             {series.map((s) => (
-              <ThemedView key={s.label} style={styles.legendItem}>
+              <View key={s.label} style={styles.legendItem}>
                 <View style={[styles.legendDot, { backgroundColor: s.color }]} />
                 <ThemedText type="small" themeColor="textSecondary">
                   {s.label}
                 </ThemedText>
-              </ThemedView>
+              </View>
             ))}
-          </ThemedView>
+          </View>
 
           {labels.length > 0 && (
-            <ThemedView style={styles.labelRow}>
+            <View style={styles.labelRow}>
               <ThemedText type="small" themeColor="textSecondary">
                 {labels[0]}
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 {labels[labels.length - 1]}
               </ThemedText>
-            </ThemedView>
+            </View>
           )}
         </>
       )}

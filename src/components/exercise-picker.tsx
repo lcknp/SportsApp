@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from './themed-text';
 import { ThemedTextInput } from './themed-text-input';
@@ -95,7 +95,7 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
     <ThemedView type="backgroundElement" style={styles.picker}>
       <ThemedTextInput placeholder="Übung suchen …" value={searchText} onChangeText={setSearchText} />
 
-      <ThemedView style={styles.chipRow}>
+      <View style={styles.chipRow}>
         <Chip label="Alle" selected={categoryFilter === null} onPress={() => setCategoryFilter(null)} />
         {EXERCISE_CATEGORIES.map((category) => (
           <Chip
@@ -105,9 +105,9 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
             onPress={() => setCategoryFilter(category)}
           />
         ))}
-      </ThemedView>
+      </View>
 
-      <ThemedView style={styles.chipRow}>
+      <View style={styles.chipRow}>
         {filteredExercises.map((exercise) => (
           <Chip
             key={exercise.id}
@@ -135,7 +135,7 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
             setPendingDeleteId(null);
           }}
         />
-      </ThemedView>
+      </View>
 
       {isManaging && (
         <ThemedText type="small" themeColor="textSecondary">
@@ -146,13 +146,13 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
       )}
 
       {showNewExerciseForm && (
-        <ThemedView style={styles.field}>
+        <View style={styles.field}>
           <ThemedTextInput
             placeholder="Name der Übung"
             value={newExerciseName}
             onChangeText={setNewExerciseName}
           />
-          <ThemedView style={styles.chipRow}>
+          <View style={styles.chipRow}>
             {EXERCISE_CATEGORIES.map((category) => (
               <Chip
                 key={category}
@@ -161,7 +161,7 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
                 onPress={() => setNewExerciseCategory(category)}
               />
             ))}
-          </ThemedView>
+          </View>
           <Pressable style={({ pressed }) => [styles.button, pressed && styles.pressed]} onPress={handleCreateExercise}>
             <ThemedView type="accent" style={styles.buttonInner}>
               <ThemedText type="smallBold" themeColor="accentText">
@@ -174,7 +174,7 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
               {error}
             </ThemedText>
           )}
-        </ThemedView>
+        </View>
       )}
     </ThemedView>
   );

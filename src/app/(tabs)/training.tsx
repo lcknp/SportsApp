@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CalendarBadge } from '@/components/calendar-badge';
@@ -52,11 +52,11 @@ export default function TrainingScreen() {
         { paddingTop: insets.top + Spacing.three, paddingBottom: insets.bottom + BottomTabInset + Spacing.six },
       ]}>
       <ThemedView style={styles.container}>
-        <ThemedView style={styles.header}>
+        <View style={styles.header}>
           <ThemedText type="subtitle">Training</ThemedText>
-        </ThemedView>
+        </View>
 
-        <ThemedView style={styles.actionRow}>
+        <View style={styles.actionRow}>
           <Pressable
             style={({ pressed }) => [styles.actionButton, pressed && styles.pressed]}
             onPress={() => setIsChoosingPlan((current) => !current)}>
@@ -73,7 +73,7 @@ export default function TrainingScreen() {
               <ThemedText type="smallBold">+ Training erstellen</ThemedText>
             </ThemedView>
           </Pressable>
-        </ThemedView>
+        </View>
 
         <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={() => router.push('/volume')}>
           <ThemedText type="link" themeColor="textSecondary" style={styles.volumeLink}>
@@ -90,7 +90,7 @@ export default function TrainingScreen() {
               </ThemedText>
             ) : (
               plans.map((plan) => (
-                <ThemedView key={plan.id} style={styles.planRow}>
+                <View key={plan.id} style={styles.planRow}>
                   <Pressable
                     style={({ pressed }) => [styles.planStart, pressed && styles.pressed]}
                     onPress={() => {
@@ -114,7 +114,7 @@ export default function TrainingScreen() {
                       Löschen
                     </ThemedText>
                   </Pressable>
-                </ThemedView>
+                </View>
               ))
             )}
           </ThemedView>
@@ -128,14 +128,14 @@ export default function TrainingScreen() {
 
         {monthGroups.map((group) => (
           <ThemedView key={group.label} style={styles.monthGroup}>
-            <ThemedView style={styles.monthHeader}>
+            <View style={styles.monthHeader}>
               <ThemedText type="smallBold" themeColor="textSecondary">
                 {group.label}
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 {group.items.length} {group.items.length === 1 ? 'Workout' : 'Workouts'}
               </ThemedText>
-            </ThemedView>
+            </View>
 
             {group.items.map((trainingSession) => {
               const isExpanded = expandedId === trainingSession.id;
@@ -151,9 +151,9 @@ export default function TrainingScreen() {
                     if (isExpanded) setEditingId(null);
                   }}>
                   <ThemedView type="backgroundElement" style={styles.card}>
-                    <ThemedView style={styles.logRow}>
+                    <View style={styles.logRow}>
                       <CalendarBadge date={new Date(trainingSession.date)} />
-                      <ThemedView style={styles.logBody}>
+                      <View style={styles.logBody}>
                         <ThemedText type="smallBold">{trainingSession.name}</ThemedText>
                         {sortedExercises.length === 0 ? (
                           <ThemedText type="small" themeColor="textSecondary">
@@ -167,18 +167,18 @@ export default function TrainingScreen() {
                             </ThemedText>
                           ))
                         )}
-                      </ThemedView>
+                      </View>
                       {trainingSession.duration_minutes != null && (
                         <ThemedText type="small" themeColor="textSecondary">
                           {trainingSession.duration_minutes} min
                         </ThemedText>
                       )}
-                    </ThemedView>
+                    </View>
 
                     {isExpanded && (
-                      <ThemedView style={styles.detailArea}>
+                      <View style={styles.detailArea}>
                         {sortedExercises.map((sessionExercise) => (
-                          <ThemedView key={sessionExercise.id} style={styles.exerciseGroup}>
+                          <View key={sessionExercise.id} style={styles.exerciseGroup}>
                             <ThemedText type="small">{sessionExercise.exercise?.name}</ThemedText>
                             {sessionExercise.set_entries.length > 0 ? (
                               sessionExercise.set_entries.map((set, index) => (
@@ -193,10 +193,10 @@ export default function TrainingScreen() {
                                 {sessionExercise.weight_kg > 0 ? ` · ${sessionExercise.weight_kg} kg` : ''}
                               </ThemedText>
                             )}
-                          </ThemedView>
+                          </View>
                         ))}
 
-                        <ThemedView style={styles.detailActions}>
+                        <View style={styles.detailActions}>
                           <Pressable
                             style={({ pressed }) => pressed && styles.pressed}
                             onPress={() =>
@@ -219,19 +219,19 @@ export default function TrainingScreen() {
                               Löschen
                             </ThemedText>
                           </Pressable>
-                        </ThemedView>
+                        </View>
 
                         {editingId === trainingSession.id && (
-                          <ThemedView style={styles.editArea}>
+                          <View style={styles.editArea}>
                             <DateStepper date={editDate} onChange={setEditDate} />
-                            <ThemedView style={styles.field}>
+                            <View style={styles.field}>
                               <ThemedText type="small">Dauer (Minuten)</ThemedText>
                               <ThemedTextInput
                                 keyboardType="numeric"
                                 value={editDuration}
                                 onChangeText={setEditDuration}
                               />
-                            </ThemedView>
+                            </View>
                             <Pressable
                               style={({ pressed }) => [styles.saveButton, pressed && styles.pressed]}
                               onPress={handleSaveEdit}>
@@ -241,9 +241,9 @@ export default function TrainingScreen() {
                                 </ThemedText>
                               </ThemedView>
                             </Pressable>
-                          </ThemedView>
+                          </View>
                         )}
-                      </ThemedView>
+                      </View>
                     )}
                   </ThemedView>
                 </Pressable>

@@ -1,6 +1,6 @@
 import { router, usePathname } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -31,7 +31,7 @@ export function ResumeWorkoutBar() {
   if (!workout || pathname === '/new-training') return null;
 
   const elapsedSeconds = Math.max(0, Math.floor((Date.now() - workout.startedAt) / 1000));
-  const bottomOffset = (Platform.OS === 'web' ? 72 : BottomTabInset) + insets.bottom + Spacing.two;
+  const bottomOffset = BottomTabInset + insets.bottom + Spacing.two;
 
   return (
     <ThemedView pointerEvents="box-none" style={[styles.wrapper, { bottom: bottomOffset }]}>

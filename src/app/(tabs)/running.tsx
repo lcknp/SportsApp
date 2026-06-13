@@ -1,7 +1,7 @@
 import { differenceInCalendarDays } from 'date-fns';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CalendarBadge } from '@/components/calendar-badge';
@@ -76,7 +76,7 @@ export default function RunningScreen() {
         { paddingTop: insets.top + Spacing.three, paddingBottom: insets.bottom + BottomTabInset + Spacing.six },
       ]}>
       <ThemedView style={styles.container}>
-        <ThemedView style={styles.header}>
+        <View style={styles.header}>
           <ThemedText type="subtitle">Laufen</ThemedText>
           <Pressable
             style={({ pressed }) => [styles.addButton, pressed && styles.pressed]}
@@ -85,20 +85,20 @@ export default function RunningScreen() {
               <ThemedText type="smallBold">+ Lauf</ThemedText>
             </ThemedView>
           </Pressable>
-        </ThemedView>
+        </View>
 
         {isConfigured && (
           <ThemedView type="backgroundElement" style={styles.stravaCard}>
             {isConnected ? (
               <>
-                <ThemedView style={styles.stravaRow}>
+                <View style={styles.stravaRow}>
                   <ThemedText type="smallBold">✓ Strava verbunden</ThemedText>
                   <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={disconnect}>
                     <ThemedText type="small" themeColor="textSecondary">
                       Trennen
                     </ThemedText>
                   </Pressable>
-                </ThemedView>
+                </View>
                 <Pressable
                   style={({ pressed }) => [styles.stravaButton, pressed && styles.pressed]}
                   disabled={isSyncing}
@@ -139,32 +139,32 @@ export default function RunningScreen() {
         {recentRuns.length > 0 && (
           <ThemedView type="backgroundElement" style={styles.statsCard}>
             <ThemedText type="smallBold">Letzte 30 Tage</ThemedText>
-            <ThemedView style={styles.statsRow}>
-              <ThemedView style={styles.stat}>
+            <View style={styles.statsRow}>
+              <View style={styles.stat}>
                 <ThemedText type="title" themeColor="accent">
                   {recentRuns.length}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
                   Läufe
                 </ThemedText>
-              </ThemedView>
-              <ThemedView style={styles.stat}>
+              </View>
+              <View style={styles.stat}>
                 <ThemedText type="title" themeColor="accent">
                   {recentKm.toFixed(1)}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
                   km
                 </ThemedText>
-              </ThemedView>
-              <ThemedView style={styles.stat}>
+              </View>
+              <View style={styles.stat}>
                 <ThemedText type="title" themeColor="accent">
                   {formatPace(recentKm, recentMinutes).replace(' min/km', '')}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
                   Ø Pace
                 </ThemedText>
-              </ThemedView>
-            </ThemedView>
+              </View>
+            </View>
           </ThemedView>
         )}
 
@@ -176,25 +176,25 @@ export default function RunningScreen() {
 
         {groupByMonth(runs, (run) => run.date).map((group) => (
           <ThemedView key={group.label} style={styles.monthGroup}>
-            <ThemedView style={styles.monthHeader}>
+            <View style={styles.monthHeader}>
               <ThemedText type="smallBold" themeColor="textSecondary">
                 {group.label}
               </ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 {group.items.length} {group.items.length === 1 ? 'Lauf' : 'Läufe'}
               </ThemedText>
-            </ThemedView>
+            </View>
 
             {group.items.map((run) => (
               <ThemedView key={run.id} type="backgroundElement" style={styles.card}>
                 <CalendarBadge date={new Date(run.date)} />
-                <ThemedView style={styles.cardBody}>
+                <View style={styles.cardBody}>
                   <ThemedText type="smallBold">{run.distance_km} km</ThemedText>
                   <ThemedText type="small" themeColor="textSecondary">
                     {run.duration_minutes} min · {formatPace(run.distance_km, run.duration_minutes)}
                     {run.strava_id ? ' · via Strava' : ''}
                   </ThemedText>
-                </ThemedView>
+                </View>
                 <Pressable
                   style={({ pressed }) => pressed && styles.pressed}
                   onPress={() => deleteRun(run.id, run.date)}>

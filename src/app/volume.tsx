@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedTextInput } from '@/components/themed-text-input';
@@ -39,7 +39,7 @@ export default function VolumeScreen() {
         um das Volumen pro Muskelgruppe über alle Einheiten hinweg zu sehen.
       </ThemedText>
 
-      <ThemedView style={styles.row}>
+      <View style={styles.row}>
         <ThemedTextInput
           style={styles.flex1}
           placeholder="Neue Gruppe (z.B. Push/Pull/Beine)"
@@ -53,7 +53,7 @@ export default function VolumeScreen() {
             </ThemedText>
           </ThemedView>
         </Pressable>
-      </ThemedView>
+      </View>
 
       {error && (
         <ThemedText type="small" style={styles.error}>
@@ -66,14 +66,14 @@ export default function VolumeScreen() {
         const groupSummary = combineVolumes(groupPlans.map(planVolume));
         return (
           <ThemedView key={group.id} type="backgroundElement" style={styles.card}>
-            <ThemedView style={styles.cardHeader}>
+            <View style={styles.cardHeader}>
               <ThemedText type="smallBold">{group.name}</ThemedText>
               <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={() => deleteGroup(group.id)}>
                 <ThemedText type="small" themeColor="textSecondary">
                   Gruppe löschen
                 </ThemedText>
               </Pressable>
-            </ThemedView>
+            </View>
 
             {groupPlans.length === 0 ? (
               <ThemedText type="small" themeColor="textSecondary">
@@ -82,7 +82,7 @@ export default function VolumeScreen() {
             ) : (
               <>
                 {groupPlans.map((plan) => (
-                  <ThemedView key={plan.id} style={styles.planRow}>
+                  <View key={plan.id} style={styles.planRow}>
                     <ThemedText type="small">
                       {plan.name} · {planVolume(plan).totalSets} Sätze
                     </ThemedText>
@@ -93,22 +93,22 @@ export default function VolumeScreen() {
                         Entfernen
                       </ThemedText>
                     </Pressable>
-                  </ThemedView>
+                  </View>
                 ))}
 
-                <ThemedView style={styles.divider} />
+                <View style={styles.divider} />
                 <ThemedText type="smallBold">Sätze pro Muskelgruppe</ThemedText>
                 {sortedTargets(groupSummary).map(([target, sets]) => (
-                  <ThemedView key={target} style={styles.targetRow}>
+                  <View key={target} style={styles.targetRow}>
                     <ThemedText type="small">{target}</ThemedText>
                     <ThemedText type="smallBold">{sets}</ThemedText>
-                  </ThemedView>
+                  </View>
                 ))}
-                <ThemedView style={styles.divider} />
-                <ThemedView style={styles.targetRow}>
+                <View style={styles.divider} />
+                <View style={styles.targetRow}>
                   <ThemedText type="smallBold">Gesamt</ThemedText>
                   <ThemedText type="smallBold">{groupSummary.totalSets} Sätze</ThemedText>
-                </ThemedView>
+                </View>
               </>
             )}
 
@@ -117,7 +117,7 @@ export default function VolumeScreen() {
                 <ThemedText type="small" themeColor="textSecondary">
                   Einheit hinzufügen:
                 </ThemedText>
-                <ThemedView style={styles.chipRow}>
+                <View style={styles.chipRow}>
                   {ungroupedPlans.map((plan) => (
                     <Pressable
                       key={plan.id}
@@ -128,7 +128,7 @@ export default function VolumeScreen() {
                       </ThemedView>
                     </Pressable>
                   ))}
-                </ThemedView>
+                </View>
               </>
             )}
           </ThemedView>
@@ -145,15 +145,15 @@ export default function VolumeScreen() {
         const summary = planVolume(plan);
         return (
           <ThemedView key={plan.id} type="backgroundElement" style={styles.card}>
-            <ThemedView style={styles.cardHeader}>
+            <View style={styles.cardHeader}>
               <ThemedText type="smallBold">{plan.name}</ThemedText>
               <ThemedText type="smallBold">{summary.totalSets} Sätze</ThemedText>
-            </ThemedView>
+            </View>
             {sortedTargets(summary).map(([target, sets]) => (
-              <ThemedView key={target} style={styles.targetRow}>
+              <View key={target} style={styles.targetRow}>
                 <ThemedText type="small">{target}</ThemedText>
                 <ThemedText type="small">{sets}</ThemedText>
-              </ThemedView>
+              </View>
             ))}
           </ThemedView>
         );

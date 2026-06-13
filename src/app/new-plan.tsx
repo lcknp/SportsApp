@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ExercisePicker } from '@/components/exercise-picker';
 import {
@@ -78,10 +78,10 @@ export default function NewPlanScreen() {
         „Training starten" ausführen.
       </ThemedText>
 
-      <ThemedView style={styles.field}>
+      <View style={styles.field}>
         <ThemedText type="small">Name der Einheit</ThemedText>
         <ThemedTextInput placeholder="z.B. Oberkörper, Push, Beine …" value={name} onChangeText={setName} />
-      </ThemedView>
+      </View>
 
       <ExerciseSetList exercises={exercises} onChange={setExercises} />
 

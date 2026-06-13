@@ -2,7 +2,7 @@ import { addDays, addMonths, format, isToday } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LineChart } from '@/components/line-chart';
@@ -11,6 +11,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedTextInput } from '@/components/themed-text-input';
 import { ThemedView } from '@/components/themed-view';
 import { TrainingCalendar } from '@/components/training-calendar';
+import { WeekStrip } from '@/components/week-strip';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useDailyMacros } from '@/hooks/use-daily-macros';
 import { useMacroHistory } from '@/hooks/use-macro-history';
@@ -163,24 +164,22 @@ export default function DashboardScreen() {
         { paddingTop: insets.top + Spacing.three, paddingBottom: insets.bottom + BottomTabInset + Spacing.three },
       ]}>
       <ThemedView style={styles.container}>
-        <ThemedView style={styles.header}>
-          <Pressable
-            style={({ pressed }) => [styles.dayButton, pressed && styles.pressed]}
-            onPress={() => setViewDate((current) => addDays(current, -1))}>
-            <ThemedText type="smallBold">‹</ThemedText>
-          </Pressable>
-          <ThemedView style={styles.headerCenter}>
-            <ThemedText type="subtitle">{isToday(viewDate) ? 'Heute' : format(viewDate, 'EEEE', { locale: de })}</ThemedText>
+        <View style={styles.header}>
+          <ThemedText type="subtitle">
+            {isToday(viewDate) ? 'Heute' : format(viewDate, 'EEEE, d. MMMM', { locale: de })}
+          </ThemedText>
+          {!isToday(viewDate) && (
             <ThemedText type="small" themeColor="textSecondary">
               {format(viewDate, 'd. MMMM yyyy', { locale: de })}
             </ThemedText>
-          </ThemedView>
-          <Pressable
-            style={({ pressed }) => [styles.dayButton, pressed && styles.pressed]}
-            onPress={() => setViewDate((current) => addDays(current, 1))}>
-            <ThemedText type="smallBold">›</ThemedText>
-          </Pressable>
-        </ThemedView>
+          )}
+        </View>
+
+        <WeekStrip
+          selectedDate={viewDate}
+          onSelectDate={setViewDate}
+          onSwipeWeek={(deltaWeeks) => setViewDate((current) => addDays(current, deltaWeeks * 7))}
+        />
 
         {isStepCountAvailable && steps != null && (
           <ThemedView type="backgroundElement" style={styles.stepsCard}>
@@ -195,12 +194,12 @@ export default function DashboardScreen() {
           <Pressable
             style={({ pressed }) => pressed && styles.pressed}
             onPress={() => setIsMacrosCollapsed((current) => !current)}>
-            <ThemedView style={styles.collapseHeader}>
+            <View style={styles.collapseHeader}>
               <ThemedText type="smallBold">Tagesmakros</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 {isMacrosCollapsed ? '▸ Aufklappen' : '▾ Einklappen'}
               </ThemedText>
-            </ThemedView>
+            </View>
           </Pressable>
 
           {!isMacrosCollapsed && (
@@ -215,24 +214,24 @@ export default function DashboardScreen() {
               <MacroProgress label="Kohlenhydrate" current={carbsG} goal={goals.daily_carbs_g} unit="g" />
               <MacroProgress label="Fett" current={fatG} goal={goals.daily_fat_g} unit="g" />
 
-              <ThemedView style={styles.row}>
-                <ThemedView style={[styles.field, styles.flex1]}>
+              <View style={styles.row}>
+                <View style={[styles.field, styles.flex1]}>
                   <ThemedText type="small">Protein (g)</ThemedText>
                   <ThemedTextInput keyboardType="numeric" value={protein} onChangeText={setProtein} />
-                </ThemedView>
-                <ThemedView style={[styles.field, styles.flex1]}>
+                </View>
+                <View style={[styles.field, styles.flex1]}>
                   <ThemedText type="small">Kohlenhydrate (g)</ThemedText>
                   <ThemedTextInput keyboardType="numeric" value={carbs} onChangeText={setCarbs} />
-                </ThemedView>
-                <ThemedView style={[styles.field, styles.flex1]}>
+                </View>
+                <View style={[styles.field, styles.flex1]}>
                   <ThemedText type="small">Fett (g)</ThemedText>
                   <ThemedTextInput keyboardType="numeric" value={fat} onChangeText={setFat} />
-                </ThemedView>
-              </ThemedView>
+                </View>
+              </View>
 
               {macroMessage && <ThemedText type="small">{macroMessage}</ThemedText>}
 
-              <ThemedView style={styles.row}>
+              <View style={styles.row}>
                 <Pressable
                   style={({ pressed }) => [styles.saveButton, styles.flex1, pressed && styles.pressed]}
                   disabled={isSavingMacros}
@@ -251,7 +250,7 @@ export default function DashboardScreen() {
                     <ThemedText type="smallBold">Löschen</ThemedText>
                   </ThemedView>
                 </Pressable>
-              </ThemedView>
+              </View>
             </>
           )}
         </ThemedView>
@@ -260,22 +259,22 @@ export default function DashboardScreen() {
           <Pressable
             style={({ pressed }) => pressed && styles.pressed}
             onPress={() => setIsWeightCollapsed((current) => !current)}>
-            <ThemedView style={styles.collapseHeader}>
+            <View style={styles.collapseHeader}>
               <ThemedText type="smallBold">Gewicht</ThemedText>
               <ThemedText type="small" themeColor="textSecondary">
                 {isWeightCollapsed ? '▸ Aufklappen' : '▾ Einklappen'}
               </ThemedText>
-            </ThemedView>
+            </View>
           </Pressable>
 
           {!isWeightCollapsed && (
             <>
-              <ThemedView style={styles.row}>
-                <ThemedView style={[styles.field, styles.flex1]}>
+              <View style={styles.row}>
+                <View style={[styles.field, styles.flex1]}>
                   <ThemedText type="small">Gewicht (kg)</ThemedText>
                   <ThemedTextInput keyboardType="numeric" value={weight} onChangeText={setWeight} />
-                </ThemedView>
-              </ThemedView>
+                </View>
+              </View>
 
               {weightMessage && <ThemedText type="small">{weightMessage}</ThemedText>}
 
@@ -291,13 +290,13 @@ export default function DashboardScreen() {
               </Pressable>
 
               {weights.length > 0 && (
-                <ThemedView style={styles.weightHistory}>
+                <View style={styles.weightHistory}>
                   {weights.slice(0, 7).map((entry) => (
-                    <ThemedView key={entry.id} style={styles.weightRow}>
+                    <View key={entry.id} style={styles.weightRow}>
                       <ThemedText type="small" themeColor="textSecondary">
                         {format(new Date(entry.date), 'EEEE, d. MMMM', { locale: de })}
                       </ThemedText>
-                      <ThemedView style={styles.weightRowRight}>
+                      <View style={styles.weightRowRight}>
                         <ThemedText type="small">{entry.weight_kg} kg</ThemedText>
                         <Pressable
                           style={({ pressed }) => pressed && styles.pressed}
@@ -306,10 +305,10 @@ export default function DashboardScreen() {
                             Löschen
                           </ThemedText>
                         </Pressable>
-                      </ThemedView>
-                    </ThemedView>
+                      </View>
+                    </View>
                   ))}
-                </ThemedView>
+                </View>
               )}
             </>
           )}
@@ -325,7 +324,7 @@ export default function DashboardScreen() {
 
         {selectedDate && (
           <ThemedView type="backgroundElement" style={styles.macroCard}>
-            <ThemedView style={styles.dayDetailHeader}>
+            <View style={styles.dayDetailHeader}>
               <ThemedText type="smallBold">
                 {format(selectedDate, 'EEEE, d. MMMM', { locale: de })}
               </ThemedText>
@@ -334,7 +333,7 @@ export default function DashboardScreen() {
                   Schließen
                 </ThemedText>
               </Pressable>
-            </ThemedView>
+            </View>
 
             {selectedDayTrainings.length === 0 &&
               selectedDayRuns.length === 0 &&
@@ -346,7 +345,7 @@ export default function DashboardScreen() {
               )}
 
             {selectedDayTrainings.map((trainingSession) => (
-              <ThemedView key={trainingSession.id} style={styles.dayDetailItem}>
+              <View key={trainingSession.id} style={styles.dayDetailItem}>
                 <ThemedText type="small">
                   {trainingSession.name}
                   {trainingSession.duration_minutes != null ? ` · ${trainingSession.duration_minutes} min` : ''}
@@ -356,7 +355,7 @@ export default function DashboardScreen() {
                   .sort((a, b) => a.order_index - b.order_index)
                   .map((sessionExercise) =>
                     sessionExercise.set_entries.length > 0 ? (
-                      <ThemedView key={sessionExercise.id} style={styles.dayDetailExercise}>
+                      <View key={sessionExercise.id} style={styles.dayDetailExercise}>
                         <ThemedText type="small">{sessionExercise.exercise?.name}</ThemedText>
                         {sessionExercise.set_entries.map((set, index) => (
                           <ThemedText key={index} type="small" themeColor="textSecondary">
@@ -364,7 +363,7 @@ export default function DashboardScreen() {
                             {set.reps} Wdh.
                           </ThemedText>
                         ))}
-                      </ThemedView>
+                      </View>
                     ) : (
                       <ThemedText key={sessionExercise.id} type="small" themeColor="textSecondary">
                         {sessionExercise.exercise?.name}: {sessionExercise.sets} × {sessionExercise.reps}
@@ -372,35 +371,35 @@ export default function DashboardScreen() {
                       </ThemedText>
                     ),
                   )}
-              </ThemedView>
+              </View>
             ))}
 
             {selectedDayRuns.map((run) => (
-              <ThemedView key={run.id} style={styles.dayDetailItem}>
+              <View key={run.id} style={styles.dayDetailItem}>
                 <ThemedText type="small">Lauf</ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
                   {run.distance_km} km · {run.duration_minutes} min
                 </ThemedText>
-              </ThemedView>
+              </View>
             ))}
 
             {selectedDayWeight && (
-              <ThemedView style={styles.dayDetailItem}>
+              <View style={styles.dayDetailItem}>
                 <ThemedText type="small">Gewicht</ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
                   {selectedDayWeight.weight_kg} kg
                 </ThemedText>
-              </ThemedView>
+              </View>
             )}
 
             {selectedDayMacros && (
-              <ThemedView style={styles.dayDetailItem}>
+              <View style={styles.dayDetailItem}>
                 <ThemedText type="small">Makros</ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
                   {selectedDayCalories} kcal · {selectedDayMacros.protein_g} g Protein ·{' '}
                   {selectedDayMacros.carbs_g} g Kohlenhydrate · {selectedDayMacros.fat_g} g Fett
                 </ThemedText>
-              </ThemedView>
+              </View>
             )}
           </ThemedView>
         )}
@@ -426,16 +425,7 @@ const styles = StyleSheet.create({
     gap: Spacing.four,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerCenter: {
-    alignItems: 'center',
-  },
-  dayButton: {
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+    gap: Spacing.half,
   },
   collapseHeader: {
     flexDirection: 'row',

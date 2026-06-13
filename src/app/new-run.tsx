@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { DateStepper } from '@/components/date-stepper';
 import { ThemedText } from '@/components/themed-text';
@@ -53,16 +53,16 @@ export default function NewRunScreen() {
 
       <DateStepper date={date} onChange={setDate} />
 
-      <ThemedView style={styles.row}>
-        <ThemedView style={[styles.field, styles.flex1]}>
+      <View style={styles.row}>
+        <View style={[styles.field, styles.flex1]}>
           <ThemedText type="small">Distanz (km)</ThemedText>
           <ThemedTextInput keyboardType="numeric" value={distance} onChangeText={setDistance} />
-        </ThemedView>
-        <ThemedView style={[styles.field, styles.flex1]}>
+        </View>
+        <View style={[styles.field, styles.flex1]}>
           <ThemedText type="small">Dauer (min)</ThemedText>
           <ThemedTextInput keyboardType="numeric" value={duration} onChangeText={setDuration} />
-        </ThemedView>
-      </ThemedView>
+        </View>
+      </View>
 
       <ThemedView type="backgroundElement" style={styles.paceCard}>
         <ThemedText type="small" themeColor="textSecondary">

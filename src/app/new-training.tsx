@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ExercisePicker } from '@/components/exercise-picker';
 import {
@@ -159,14 +159,14 @@ export default function ActiveTrainingScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <ThemedView style={styles.titleRow}>
+      <View style={styles.titleRow}>
         <ThemedText type="title">{workout.name}</ThemedText>
         <ThemedView type="accent" style={styles.timerBadge}>
           <ThemedText type="smallBold" themeColor="accentText">
             ⏱ {formatElapsed(elapsedSeconds)}
           </ThemedText>
         </ThemedView>
-      </ThemedView>
+      </View>
 
       <Pressable style={({ pressed }) => [styles.button, pressed && styles.pressed]} onPress={() => router.back()}>
         <ThemedView type="backgroundElement" style={styles.buttonInner}>
@@ -174,13 +174,13 @@ export default function ActiveTrainingScreen() {
         </ThemedView>
       </Pressable>
 
-      <ThemedView style={styles.field}>
+      <View style={styles.field}>
         <ThemedText type="small">Name</ThemedText>
         <ThemedTextInput
           value={workout.name}
           onChangeText={(value) => setWorkout((current) => current && { ...current, name: value })}
         />
-      </ThemedView>
+      </View>
 
       {workout.exercises.length === 0 && (
         <ThemedText type="small" themeColor="textSecondary">

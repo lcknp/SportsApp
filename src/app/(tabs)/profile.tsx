@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedTextInput } from '@/components/themed-text-input';
@@ -107,7 +107,7 @@ export default function ProfileScreen() {
         Profil
       </ThemedText>
 
-      <ThemedView style={styles.tabRow}>
+      <View style={styles.tabRow}>
         <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={() => setTab('settings')}>
           <ThemedView type={tab === 'settings' ? 'backgroundSelected' : 'backgroundElement'} style={styles.tab}>
             <ThemedText type="smallBold">Einstellungen</ThemedText>
@@ -118,13 +118,13 @@ export default function ProfileScreen() {
             <ThemedText type="smallBold">Tagesziele</ThemedText>
           </ThemedView>
         </Pressable>
-      </ThemedView>
+      </View>
 
       {tab === 'settings' && (
         <>
           <ThemedView type="backgroundElement" style={styles.card}>
             <ThemedText type="smallBold">Darstellung</ThemedText>
-            <ThemedView style={styles.themeRow}>
+            <View style={styles.themeRow}>
               {THEME_OPTIONS.map((option) => (
                 <Pressable
                   key={option.value}
@@ -137,7 +137,7 @@ export default function ProfileScreen() {
                   </ThemedView>
                 </Pressable>
               ))}
-            </ThemedView>
+            </View>
             <ThemedText type="small" themeColor="textSecondary">
               „System" folgt automatisch der Einstellung deines Geräts.
             </ThemedText>
@@ -145,9 +145,9 @@ export default function ProfileScreen() {
 
           <ThemedView type="backgroundElement" style={styles.card}>
             <ThemedText type="smallBold">Name</ThemedText>
-            <ThemedView style={styles.field}>
+            <View style={styles.field}>
               <ThemedTextInput placeholder="Dein Name" value={name} onChangeText={setName} />
-            </ThemedView>
+            </View>
             {nameMessage && <ThemedText type="small">{nameMessage}</ThemedText>}
             <Pressable
               style={({ pressed }) => [styles.button, pressed && styles.pressed]}
@@ -161,14 +161,14 @@ export default function ProfileScreen() {
 
           <ThemedView type="backgroundElement" style={styles.card}>
             <ThemedText type="smallBold">E-Mail-Adresse</ThemedText>
-            <ThemedView style={styles.field}>
+            <View style={styles.field}>
               <ThemedTextInput
                 keyboardType="email-address"
                 autoCapitalize="none"
                 value={email}
                 onChangeText={setEmail}
               />
-            </ThemedView>
+            </View>
             {emailMessage && <ThemedText type="small">{emailMessage}</ThemedText>}
             <Pressable
               style={({ pressed }) => [styles.button, pressed && styles.pressed]}
@@ -182,14 +182,14 @@ export default function ProfileScreen() {
 
           <ThemedView type="backgroundElement" style={styles.card}>
             <ThemedText type="smallBold">Passwort</ThemedText>
-            <ThemedView style={styles.field}>
+            <View style={styles.field}>
               <ThemedTextInput
                 placeholder="Neues Passwort"
                 secureTextEntry
                 value={password}
                 onChangeText={setPassword}
               />
-            </ThemedView>
+            </View>
             {passwordMessage && <ThemedText type="small">{passwordMessage}</ThemedText>}
             <Pressable
               style={({ pressed }) => [styles.button, pressed && styles.pressed]}
@@ -213,25 +213,25 @@ export default function ProfileScreen() {
         <ThemedView type="backgroundElement" style={styles.card}>
           <ThemedText type="smallBold">Tagesziele</ThemedText>
 
-          <ThemedView style={styles.field}>
+          <View style={styles.field}>
             <ThemedText type="small">Kalorien (kcal)</ThemedText>
             <ThemedTextInput keyboardType="numeric" value={calories} onChangeText={setCalories} />
-          </ThemedView>
+          </View>
 
-          <ThemedView style={styles.field}>
+          <View style={styles.field}>
             <ThemedText type="small">Protein (g)</ThemedText>
             <ThemedTextInput keyboardType="numeric" value={protein} onChangeText={setProtein} />
-          </ThemedView>
+          </View>
 
-          <ThemedView style={styles.field}>
+          <View style={styles.field}>
             <ThemedText type="small">Kohlenhydrate (g)</ThemedText>
             <ThemedTextInput keyboardType="numeric" value={carbs} onChangeText={setCarbs} />
-          </ThemedView>
+          </View>
 
-          <ThemedView style={styles.field}>
+          <View style={styles.field}>
             <ThemedText type="small">Fett (g)</ThemedText>
             <ThemedTextInput keyboardType="numeric" value={fat} onChangeText={setFat} />
-          </ThemedView>
+          </View>
 
           {goalsMessage && <ThemedText type="small">{goalsMessage}</ThemedText>}
 

@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ExerciseVideoButton } from './exercise-video';
 import { ThemedText } from './themed-text';
@@ -66,16 +66,16 @@ export function ExerciseSetList({ exercises, onChange }: ExerciseSetListProps) {
     <>
       {exercises.map((exercise, exerciseIndex) => (
         <ThemedView key={`${exercise.exercise_id}-${exerciseIndex}`} type="backgroundElement" style={styles.card}>
-          <ThemedView style={styles.cardHeader}>
-            <ThemedView style={styles.cardTitle}>
+          <View style={styles.cardHeader}>
+            <View style={styles.cardTitle}>
               <ThemedText type="smallBold">{exercise.name}</ThemedText>
               {exercise.target ? (
                 <ThemedText type="small" themeColor="textSecondary">
                   {exercise.target}
                 </ThemedText>
               ) : null}
-            </ThemedView>
-            <ThemedView style={styles.cardActions}>
+            </View>
+            <View style={styles.cardActions}>
               {exercise.video_url ? <ExerciseVideoButton url={exercise.video_url} /> : null}
               <Pressable
                 style={({ pressed }) => pressed && styles.pressed}
@@ -84,36 +84,36 @@ export function ExerciseSetList({ exercises, onChange }: ExerciseSetListProps) {
                   Entfernen
                 </ThemedText>
               </Pressable>
-            </ThemedView>
-          </ThemedView>
+            </View>
+          </View>
 
           {exercise.sets.map((set, setIndex) => (
-            <ThemedView key={setIndex} style={styles.setRow}>
-              <ThemedView style={styles.setIndexBadge}>
+            <View key={setIndex} style={styles.setRow}>
+              <View style={styles.setIndexBadge}>
                 <ThemedText type="smallBold">{setIndex + 1}</ThemedText>
-              </ThemedView>
-              <ThemedView style={[styles.field, styles.flex1]}>
+              </View>
+              <View style={[styles.field, styles.flex1]}>
                 <ThemedText type="small">kg</ThemedText>
                 <ThemedTextInput
                   keyboardType="numeric"
                   value={set.weight_kg}
                   onChangeText={(value) => updateSetField(exerciseIndex, setIndex, 'weight_kg', value)}
                 />
-              </ThemedView>
-              <ThemedView style={[styles.field, styles.flex1]}>
+              </View>
+              <View style={[styles.field, styles.flex1]}>
                 <ThemedText type="small">Wdh.</ThemedText>
                 <ThemedTextInput
                   keyboardType="numeric"
                   value={set.reps}
                   onChangeText={(value) => updateSetField(exerciseIndex, setIndex, 'reps', value)}
                 />
-              </ThemedView>
+              </View>
               <Pressable
                 style={({ pressed }) => [styles.removeSetButton, pressed && styles.pressed]}
                 onPress={() => removeSetRow(exerciseIndex, setIndex)}>
                 <ThemedText type="smallBold">✕</ThemedText>
               </Pressable>
-            </ThemedView>
+            </View>
           ))}
 
           <Pressable
