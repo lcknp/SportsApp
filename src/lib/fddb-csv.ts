@@ -25,12 +25,28 @@ function toNumber(raw: string | undefined): number {
   return Number.isFinite(value) ? value : 0;
 }
 
-// "12.06.2026 23:44" -> "2026-06-12"  (nur der Datumsteil)
+// FDDB ordnet Einträge nicht nach Kalendertag, sondern nach "Tagebuch-Tag"
+// zu: ein Snack kurz nach Mitternacht zählt noch zum Vortag. Die CSV liefert
+// aber nur den Uhrzeit-Stempel (dann bereits im nächsten Kalendertag). Wir
+// bilden FDDB nach, indem Einträge vor DAY_CUTOFF_HOUR dem Vortag zugerechnet
+// werden. In den Daten gibt es zwischen 03:00 und 05:00 keine Einträge — die
+// erste Mahlzeit beginnt um 05:00 — daher trennt 05:00 Nacht-Snacks sauber
+// von Frühstücken, ohne je eine echte Mahlzeit falsch einzuordnen.
+const DAY_CUTOFF_HOUR = 5;
+
+// "12.06.2026 23:44" -> "2026-06-12"; "11.06.2026 00:03" -> "2026-06-10"
+// (Einträge vor 05:00 zählen zum Vortag, siehe DAY_CUTOFF_HOUR).
 function toIsoDate(raw: string | undefined): string | null {
   if (!raw) return null;
-  const match = raw.match(/^(\d{2})\.(\d{2})\.(\d{4})/);
+  const match = raw.match(/^(\d{2})\.(\d{2})\.(\d{4})(?: (\d{2}):(\d{2}))?/);
   if (!match) return null;
-  return `${match[3]}-${match[2]}-${match[1]}`;
+  const [, dd, mm, yyyy, hh] = match;
+  // In UTC rechnen, damit der Tageswechsel nicht von der Zeitzone abhängt.
+  const date = new Date(Date.UTC(Number(yyyy), Number(mm) - 1, Number(dd)));
+  if (hh !== undefined && Number(hh) < DAY_CUTOFF_HOUR) {
+    date.setUTCDate(date.getUTCDate() - 1);
+  }
+  return date.toISOString().slice(0, 10);
 }
 
 export function parseFddbCsv(text: string): FddbDay[] {
