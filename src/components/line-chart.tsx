@@ -1,9 +1,10 @@
 import { StyleSheet, View } from 'react-native';
-import Svg, { Circle, Polyline } from 'react-native-svg';
+import Svg, { Circle, Line, Polyline } from 'react-native-svg';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 export type LineChartSeries = {
   label: string;
@@ -16,12 +17,42 @@ type LineChartProps = {
   series: LineChartSeries[];
   labels: string[];
   height?: number;
+  /** Einheit für die Y-Achsen-Beschriftung, z.B. "g" oder "kcal". */
+  unit?: string;
+  /** Y-Achse bei 0 beginnen lassen (für absolute Mengen wie Gramm). */
+  baselineZero?: boolean;
 };
 
-function buildPoints(values: number[]) {
+const Y_AXIS_WIDTH = 34;
+const TICK_COUNT = 5;
+
+// „Schöne" Schrittweite (1/2/2.5/5/10 × Zehnerpotenz) für ~TICK_COUNT Ticks.
+function niceStep(range: number): number {
+  if (range <= 0) return 1;
+  const raw = range / TICK_COUNT;
+  const pow = Math.pow(10, Math.floor(Math.log10(raw)));
+  const candidates = [1, 2, 2.5, 5, 10].map((m) => m * pow);
+  return candidates.find((c) => c >= raw) ?? 10 * pow;
+}
+
+// Gemeinsame Y-Skala über alle Serien + gerundete Tick-Werte.
+function computeScale(series: LineChartSeries[], baselineZero: boolean) {
+  const values = series.flatMap((s) => s.values);
+  if (values.length === 0) return { min: 0, max: 1, ticks: [0, 1] };
+
+  const dataMin = baselineZero ? 0 : Math.min(...values);
+  const dataMax = Math.max(...values);
+  const step = niceStep(dataMax - dataMin || dataMax || 1);
+  const min = Math.floor(dataMin / step) * step;
+  const max = Math.ceil((dataMax || step) / step) * step;
+
+  const ticks: number[] = [];
+  for (let t = min; t <= max + step / 2; t += step) ticks.push(t);
+  return { min, max: max === min ? min + step : max, ticks };
+}
+
+function buildPoints(values: number[], min: number, max: number) {
   if (values.length === 0) return '';
-  const min = Math.min(...values);
-  const max = Math.max(...values);
   const range = max - min || 1;
   return values
     .map((value, index) => {
@@ -32,8 +63,23 @@ function buildPoints(values: number[]) {
     .join(' ');
 }
 
-export function LineChart({ title, series, labels, height = 140 }: LineChartProps) {
+export function LineChart({
+  title,
+  series,
+  labels,
+  height = 160,
+  unit,
+  baselineZero = false,
+}: LineChartProps) {
+  const theme = useTheme();
   const hasData = series.some((s) => s.values.length > 0);
+  const { min, max, ticks } = computeScale(series, baselineZero);
+
+  // X-Achse: erste, mittlere und letzte Beschriftung (sonst überlappt es).
+  const xLabels =
+    labels.length <= 1
+      ? labels
+      : [labels[0], labels[Math.floor((labels.length - 1) / 2)], labels[labels.length - 1]];
 
   return (
     <ThemedView type="backgroundElement" style={styles.container}>
@@ -45,39 +91,81 @@ export function LineChart({ title, series, labels, height = 140 }: LineChartProp
         </ThemedText>
       ) : (
         <>
-          <View style={[styles.chartArea, { height }]}>
-            <Svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
-              {series.map((s) => {
-                const points = buildPoints(s.values);
-                if (!points) return null;
-                return (
-                  <Polyline
-                    key={s.label}
-                    points={points}
-                    fill="none"
-                    stroke={s.color}
-                    strokeWidth={2}
-                    vectorEffect="non-scaling-stroke"
-                  />
-                );
-              })}
-              {series.map((s) =>
-                s.values.length > 0
-                  ? (() => {
-                      const min = Math.min(...s.values);
-                      const max = Math.max(...s.values);
-                      const range = max - min || 1;
-                      const lastIndex = s.values.length - 1;
-                      const x = s.values.length > 1 ? (lastIndex / lastIndex) * 100 : 50;
-                      const y = 100 - ((s.values[lastIndex] - min) / range) * 100;
-                      return (
-                        <Circle key={`${s.label}-last`} cx={x} cy={y} r={2} fill={s.color} vectorEffect="non-scaling-stroke" />
-                      );
-                    })()
-                  : null,
-              )}
-            </Svg>
+          <View style={[styles.chartRow, { height }]}>
+            {/* Y-Achse: Tick-Werte (oben = max, unten = min) */}
+            <View style={[styles.yAxis, { width: Y_AXIS_WIDTH }]}>
+              {[...ticks].reverse().map((tick) => (
+                <ThemedText key={tick} type="small" themeColor="textSecondary" style={styles.yTick}>
+                  {Math.round(tick)}
+                </ThemedText>
+              ))}
+            </View>
+
+            <View style={styles.plotArea}>
+              <Svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none">
+                {/* Gitterlinien an den Tick-Positionen */}
+                {ticks.map((tick) => {
+                  const y = 100 - ((tick - min) / (max - min || 1)) * 100;
+                  return (
+                    <Line
+                      key={`grid-${tick}`}
+                      x1={0}
+                      y1={y}
+                      x2={100}
+                      y2={y}
+                      stroke={theme.textSecondary}
+                      strokeWidth={0.5}
+                      strokeOpacity={0.25}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  );
+                })}
+
+                {series.map((s) => {
+                  const points = buildPoints(s.values, min, max);
+                  if (!points) return null;
+                  return (
+                    <Polyline
+                      key={s.label}
+                      points={points}
+                      fill="none"
+                      stroke={s.color}
+                      strokeWidth={2}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  );
+                })}
+
+                {series.map((s) => {
+                  if (s.values.length === 0) return null;
+                  const lastIndex = s.values.length - 1;
+                  const x = s.values.length > 1 ? 100 : 50;
+                  const y = 100 - ((s.values[lastIndex] - min) / (max - min || 1)) * 100;
+                  return (
+                    <Circle
+                      key={`${s.label}-last`}
+                      cx={x}
+                      cy={y}
+                      r={2}
+                      fill={s.color}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  );
+                })}
+              </Svg>
+            </View>
           </View>
+
+          {/* X-Achse: Tage */}
+          {xLabels.length > 0 && (
+            <View style={[styles.labelRow, { paddingLeft: Y_AXIS_WIDTH }]}>
+              {xLabels.map((label, index) => (
+                <ThemedText key={`${label}-${index}`} type="small" themeColor="textSecondary">
+                  {label}
+                </ThemedText>
+              ))}
+            </View>
+          )}
 
           <View style={styles.legend}>
             {series.map((s) => (
@@ -88,18 +176,12 @@ export function LineChart({ title, series, labels, height = 140 }: LineChartProp
                 </ThemedText>
               </View>
             ))}
+            {unit && (
+              <ThemedText type="small" themeColor="textSecondary">
+                Y-Achse: {unit}
+              </ThemedText>
+            )}
           </View>
-
-          {labels.length > 0 && (
-            <View style={styles.labelRow}>
-              <ThemedText type="small" themeColor="textSecondary">
-                {labels[0]}
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {labels[labels.length - 1]}
-              </ThemedText>
-            </View>
-          )}
         </>
       )}
     </ThemedView>
@@ -112,8 +194,21 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     borderRadius: Spacing.four,
   },
-  chartArea: {
+  chartRow: {
+    flexDirection: 'row',
     width: '100%',
+  },
+  yAxis: {
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    paddingRight: Spacing.one,
+  },
+  yTick: {
+    lineHeight: 10,
+  },
+  plotArea: {
+    flex: 1,
+    height: '100%',
   },
   legend: {
     flexDirection: 'row',

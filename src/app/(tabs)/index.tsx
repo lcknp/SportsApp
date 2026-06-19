@@ -96,7 +96,14 @@ export default function DashboardScreen() {
   const weightLabels = weightHistory.map((entry) => format(new Date(entry.date), 'd.M.', { locale: de }));
 
   const macroLabels = macroHistory.map((entry) => format(new Date(entry.date), 'd.M.', { locale: de }));
+  // Makros (Gramm) und Kalorien (kcal) getrennt — eine gemeinsame Skala für
+  // beide ginge nicht auf (g ~0–500 vs. kcal ~2000–4500).
   const macroChartSeries = [
+    { label: 'Protein (g)', color: '#22A06B', values: macroHistory.map((entry) => entry.protein_g) },
+    { label: 'Kohlenhydrate (g)', color: '#E5A93B', values: macroHistory.map((entry) => entry.carbs_g) },
+    { label: 'Fett (g)', color: '#E5484D', values: macroHistory.map((entry) => entry.fat_g) },
+  ];
+  const caloriesChartSeries = [
     {
       label: 'Kalorien (kcal)',
       color: '#5B8DEF',
@@ -104,9 +111,6 @@ export default function DashboardScreen() {
         Math.round(entry.protein_g * 4 + entry.carbs_g * 4 + entry.fat_g * 9),
       ),
     },
-    { label: 'Protein (g)', color: '#22A06B', values: macroHistory.map((entry) => entry.protein_g) },
-    { label: 'Kohlenhydrate (g)', color: '#E5A93B', values: macroHistory.map((entry) => entry.carbs_g) },
-    { label: 'Fett (g)', color: '#E5484D', values: macroHistory.map((entry) => entry.fat_g) },
   ];
 
   const selectedDateString = selectedDate ? format(selectedDate, DATE_FORMAT) : null;
@@ -404,9 +408,11 @@ export default function DashboardScreen() {
           </ThemedView>
         )}
 
-        <LineChart title="Gewichtsverlauf" series={[{ label: 'Gewicht (kg)', color: '#5B8DEF', values: weightHistory.map((entry) => entry.weight_kg) }]} labels={weightLabels} />
+        <LineChart title="Gewichtsverlauf" series={[{ label: 'Gewicht (kg)', color: '#5B8DEF', values: weightHistory.map((entry) => entry.weight_kg) }]} labels={weightLabels} unit="kg" />
 
-        <LineChart title="Kalorien & Makros" series={macroChartSeries} labels={macroLabels} />
+        <LineChart title="Makros (g)" series={macroChartSeries} labels={macroLabels} unit="g" baselineZero />
+
+        <LineChart title="Kalorien (kcal)" series={caloriesChartSeries} labels={macroLabels} unit="kcal" />
       </ThemedView>
     </ScrollView>
   );
