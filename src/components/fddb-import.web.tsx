@@ -12,9 +12,10 @@ import { parseFddbCsv } from '@/lib/fddb-csv';
 // importiert die Tagesmakros. (Auf nativen Geräten greift fddb-import.tsx.)
 export function FddbImport({ onImported }: { onImported?: () => void }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const { importDays } = useMacroImport();
+  const { importDays, deleteAllDays } = useMacroImport();
   const [message, setMessage] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   async function handleFile(file: File) {
     setMessage(null);
@@ -33,6 +34,26 @@ export function FddbImport({ onImported }: { onImported?: () => void }) {
       setMessage('Datei konnte nicht gelesen werden.');
     } finally {
       setIsImporting(false);
+    }
+  }
+
+  async function handleDeleteAll() {
+    const confirmed = window.confirm(
+      'Wirklich ALLE Makro-Daten unwiderruflich löschen? Das betrifft auch manuell eingetragene Tage.',
+    );
+    if (!confirmed) return;
+    setMessage(null);
+    setIsDeleting(true);
+    try {
+      const result = await deleteAllDays();
+      if (result.error) {
+        setMessage('Fehler: ' + result.error);
+      } else {
+        setMessage(`${result.count} Tage gelöscht.`);
+        onImported?.();
+      }
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -61,11 +82,22 @@ export function FddbImport({ onImported }: { onImported?: () => void }) {
 
       <Pressable
         style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-        disabled={isImporting}
+        disabled={isImporting || isDeleting}
         onPress={() => inputRef.current?.click()}>
         <ThemedView type="backgroundSelected" style={styles.buttonInner}>
           <ThemedText type="smallBold">
             {isImporting ? 'Importiere …' : 'FDDB-CSV importieren'}
+          </ThemedText>
+        </ThemedView>
+      </Pressable>
+
+      <Pressable
+        style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+        disabled={isImporting || isDeleting}
+        onPress={handleDeleteAll}>
+        <ThemedView type="backgroundElement" style={styles.buttonInner}>
+          <ThemedText type="smallBold" style={styles.deleteLabel}>
+            {isDeleting ? 'Lösche …' : 'Alle Makro-Daten löschen'}
           </ThemedText>
         </ThemedView>
       </Pressable>
@@ -89,5 +121,8 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  deleteLabel: {
+    color: '#E5484D',
   },
 });

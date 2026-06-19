@@ -34,5 +34,20 @@ export function useMacroImport() {
     [userId],
   );
 
-  return { importDays };
+  // Löscht ALLE Makro-Tage des angemeldeten Nutzers — für einen sauberen
+  // Neustart, da ein erneuter Import nur die Tage der CSV überschreibt und
+  // alte, nicht mehr enthaltene Tage sonst stehen bleiben.
+  const deleteAllDays = useCallback(async (): Promise<{ count?: number; error?: string }> => {
+    if (!userId) return { error: 'Nicht angemeldet' };
+
+    const { error, count } = await supabase
+      .from('daily_macros')
+      .delete({ count: 'exact' })
+      .eq('user_id', userId);
+    if (error) return { error: error.message };
+
+    return { count: count ?? 0 };
+  }, [userId]);
+
+  return { importDays, deleteAllDays };
 }
