@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LineChart } from '@/components/line-chart';
 import { MacroProgress } from '@/components/macro-progress';
+import { PhotoMacroEstimate } from '@/components/photo-macro-estimate';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedTextInput } from '@/components/themed-text-input';
 import { ThemedView } from '@/components/themed-view';
@@ -217,6 +218,15 @@ export default function DashboardScreen() {
               <MacroProgress label="Protein" current={proteinG} goal={goals.daily_protein_g} unit="g" />
               <MacroProgress label="Kohlenhydrate" current={carbsG} goal={goals.daily_carbs_g} unit="g" />
               <MacroProgress label="Fett" current={fatG} goal={goals.daily_fat_g} unit="g" />
+
+              <PhotoMacroEstimate
+                onApply={(estimatedProtein, estimatedCarbs, estimatedFat) => {
+                  setProtein(String(estimatedProtein));
+                  setCarbs(String(estimatedCarbs));
+                  setFat(String(estimatedFat));
+                  setMacroMessage('Schätzung übernommen — vor dem Speichern prüfen.');
+                }}
+              />
 
               <View style={styles.row}>
                 <View style={[styles.field, styles.flex1]}>
