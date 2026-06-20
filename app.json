@@ -39,6 +39,13 @@
             "imageWidth": 76
           }
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Die App benötigt Zugriff auf deine Fotos, um ein Essensfoto für die Kalorienschätzung auszuwählen.",
+          "cameraPermission": "Die App benötigt Zugriff auf die Kamera, um ein Foto deiner Mahlzeit für die Kalorienschätzung aufzunehmen."
+        }
       ]
     ],
     "experiments": {

@@ -31,6 +31,17 @@ npx expo export --platform web
 
 Das Deployment läuft über Vercel (Konfiguration in `vercel.json`): Jeder Push auf `main` löst automatisch einen neuen Build und ein Deployment aus. In Vercel müssen die Environment-Variablen `EXPO_PUBLIC_SUPABASE_URL` und `EXPO_PUBLIC_SUPABASE_ANON_KEY` gesetzt sein.
 
+## Foto-Kalorienschätzung (Google Gemini)
+
+Auf dem Dashboard kann ein Foto vom Essen aufgenommen/hochgeladen werden; die Edge Function
+`analyze-food-photo` schickt es an die Google Gemini API und schätzt Protein, Kohlenhydrate und
+Fett (das Foto selbst wird nicht gespeichert). Dafür im Supabase-Dashboard unter
+Edge Functions → Secrets folgendes Secret hinterlegen:
+
+```
+GEMINI_API_KEY=<dein Gemini API-Key aus https://aistudio.google.com/apikey>
+```
+
 ## Projektstruktur
 
 - `src/app/` — Screens (Expo Router, file-based Routing)
