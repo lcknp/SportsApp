@@ -194,6 +194,9 @@ create table if not exists public.training_plans (
 alter table public.training_plans
   add column if not exists group_id uuid references public.plan_groups (id) on delete set null;
 
+-- Freitext-Notiz für die ganze Einheit
+alter table public.training_plans add column if not exists notes text;
+
 alter table public.training_plans enable row level security;
 
 drop policy if exists "Users manage their own training plans" on public.training_plans;
@@ -216,6 +219,9 @@ create table if not exists public.training_plan_exercises (
 
 alter table public.training_plan_exercises
   add column if not exists set_entries jsonb not null default '[]'::jsonb;
+
+-- Freitext-Notiz pro Übung in der Einheit
+alter table public.training_plan_exercises add column if not exists notes text;
 
 alter table public.training_plan_exercises enable row level security;
 

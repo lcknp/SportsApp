@@ -26,6 +26,10 @@ function RootNavigator() {
           options={{ presentation: 'modal', headerShown: true, title: 'Training erstellen' }}
         />
         <Stack.Screen
+          name="edit-plan"
+          options={{ presentation: 'modal', headerShown: true, title: 'Einheit bearbeiten' }}
+        />
+        <Stack.Screen
           name="volume"
           options={{ presentation: 'modal', headerShown: true, title: 'Volumen-Übersicht' }}
         />

@@ -109,6 +109,16 @@ export default function TrainingScreen() {
                   </Pressable>
                   <Pressable
                     style={({ pressed }) => pressed && styles.pressed}
+                    onPress={() => {
+                      setIsChoosingPlan(false);
+                      router.push(`/edit-plan?planId=${plan.id}`);
+                    }}>
+                    <ThemedText type="small" themeColor="textSecondary">
+                      Bearbeiten
+                    </ThemedText>
+                  </Pressable>
+                  <Pressable
+                    style={({ pressed }) => pressed && styles.pressed}
                     onPress={() => deletePlan(plan.id)}>
                     <ThemedText type="small" themeColor="textSecondary">
                       Löschen

@@ -15,6 +15,7 @@ export type EditableExercise = {
   video_url?: string | null;
   target?: string | null;
   sets: DraftSet[];
+  notes?: string;
 };
 
 export const DEFAULT_DRAFT_SET: DraftSet = { reps: '10', weight_kg: '' };
@@ -22,9 +23,23 @@ export const DEFAULT_DRAFT_SET: DraftSet = { reps: '10', weight_kg: '' };
 type ExerciseSetListProps = {
   exercises: EditableExercise[];
   onChange: (exercises: EditableExercise[]) => void;
+  /** Notiz-Feld pro Übung anzeigen (z.B. beim Bearbeiten einer Einheit). */
+  showNotes?: boolean;
 };
 
-export function ExerciseSetList({ exercises, onChange }: ExerciseSetListProps) {
+export function ExerciseSetList({ exercises, onChange, showNotes = false }: ExerciseSetListProps) {
+  function moveExercise(exerciseIndex: number, direction: -1 | 1) {
+    const target = exerciseIndex + direction;
+    if (target < 0 || target >= exercises.length) return;
+    const next = exercises.slice();
+    [next[exerciseIndex], next[target]] = [next[target], next[exerciseIndex]];
+    onChange(next);
+  }
+
+  function updateNotes(exerciseIndex: number, value: string) {
+    onChange(exercises.map((exercise, i) => (i === exerciseIndex ? { ...exercise, notes: value } : exercise)));
+  }
+
   function updateSetField(exerciseIndex: number, setIndex: number, field: keyof DraftSet, value: string) {
     onChange(
       exercises.map((exercise, i) =>
@@ -78,6 +93,24 @@ export function ExerciseSetList({ exercises, onChange }: ExerciseSetListProps) {
             <View style={styles.cardActions}>
               {exercise.video_url ? <ExerciseVideoButton url={exercise.video_url} /> : null}
               <Pressable
+                disabled={exerciseIndex === 0}
+                style={({ pressed }) => [styles.moveButton, pressed && styles.pressed]}
+                onPress={() => moveExercise(exerciseIndex, -1)}>
+                <ThemedText type="smallBold" themeColor={exerciseIndex === 0 ? 'textSecondary' : 'text'}>
+                  ↑
+                </ThemedText>
+              </Pressable>
+              <Pressable
+                disabled={exerciseIndex === exercises.length - 1}
+                style={({ pressed }) => [styles.moveButton, pressed && styles.pressed]}
+                onPress={() => moveExercise(exerciseIndex, 1)}>
+                <ThemedText
+                  type="smallBold"
+                  themeColor={exerciseIndex === exercises.length - 1 ? 'textSecondary' : 'text'}>
+                  ↓
+                </ThemedText>
+              </Pressable>
+              <Pressable
                 style={({ pressed }) => pressed && styles.pressed}
                 onPress={() => removeExercise(exerciseIndex)}>
                 <ThemedText type="small" themeColor="textSecondary">
@@ -123,6 +156,21 @@ export function ExerciseSetList({ exercises, onChange }: ExerciseSetListProps) {
               <ThemedText type="smallBold">+ Satz hinzufügen</ThemedText>
             </ThemedView>
           </Pressable>
+
+          {showNotes && (
+            <View style={styles.field}>
+              <ThemedText type="small" themeColor="textSecondary">
+                Notiz zur Übung
+              </ThemedText>
+              <ThemedTextInput
+                placeholder="z.B. Sitz auf Stufe 4, langsam ablassen …"
+                multiline
+                value={exercise.notes ?? ''}
+                onChangeText={(value) => updateNotes(exerciseIndex, value)}
+                style={styles.notesInput}
+              />
+            </View>
+          )}
         </ThemedView>
       ))}
     </>
@@ -166,6 +214,17 @@ const styles = StyleSheet.create({
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  moveButton: {
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notesInput: {
+    minHeight: 64,
+    textAlignVertical: 'top',
+    paddingTop: Spacing.two,
   },
   field: {
     gap: Spacing.one,

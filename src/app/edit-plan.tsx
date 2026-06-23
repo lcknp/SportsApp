@@ -1,11 +1,12 @@
-import { router } from 'expo-router';
-import { useState } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ExercisePicker } from '@/components/exercise-picker';
 import {
   DEFAULT_DRAFT_SET,
   ExerciseSetList,
+  type DraftSet,
   type EditableExercise,
 } from '@/components/exercise-set-list';
 import { ThemedText } from '@/components/themed-text';
@@ -15,15 +16,47 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTrainingPlans } from '@/hooks/use-training-plans';
 import type { Exercise, SetEntry } from '@/types/database';
 
-export default function NewPlanScreen() {
-  const { createPlan } = useTrainingPlans();
+function toDraftSets(entries: SetEntry[]): DraftSet[] {
+  if (entries.length === 0) return [{ ...DEFAULT_DRAFT_SET }];
+  return entries.map((entry) => ({
+    reps: String(entry.reps),
+    weight_kg: entry.weight_kg > 0 ? String(entry.weight_kg) : '',
+  }));
+}
+
+export default function EditPlanScreen() {
+  const { planId } = useLocalSearchParams<{ planId?: string }>();
+  const { plans, updatePlan } = useTrainingPlans();
+  const plan = plans.find((p) => p.id === planId);
 
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
   const [exercises, setExercises] = useState<EditableExercise[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Einmalig vorbefüllen, sobald die Einheit geladen ist.
+  useEffect(() => {
+    if (isInitialized || !plan) return;
+    setName(plan.name);
+    setNotes(plan.notes ?? '');
+    setExercises(
+      plan.training_plan_exercises
+        .slice()
+        .sort((a, b) => a.order_index - b.order_index)
+        .map((planExercise) => ({
+          exercise_id: planExercise.exercise_id,
+          name: planExercise.exercise?.name ?? '',
+          video_url: planExercise.exercise?.video_url,
+          target: planExercise.exercise?.target,
+          sets: toDraftSets(planExercise.set_entries),
+          notes: planExercise.notes ?? '',
+        })),
+    );
+    setIsInitialized(true);
+  }, [plan, isInitialized]);
 
   function handleSelectExercise(exercise: Exercise) {
     setExercises((current) => [
@@ -39,6 +72,7 @@ export default function NewPlanScreen() {
   }
 
   async function handleSave() {
+    if (!planId) return;
     setError(null);
     if (!name.trim()) {
       setError('Bitte gib der Einheit einen Namen.');
@@ -49,7 +83,8 @@ export default function NewPlanScreen() {
       return;
     }
     setIsSaving(true);
-    const message = await createPlan(
+    const message = await updatePlan(
+      planId,
       name.trim(),
       exercises.map((exercise) => ({
         exercise_id: exercise.exercise_id,
@@ -71,14 +106,24 @@ export default function NewPlanScreen() {
     router.back();
   }
 
+  if (!plan && !isInitialized) {
+    return (
+      <ScrollView contentContainerStyle={styles.container}>
+        <ThemedText type="small" themeColor="textSecondary">
+          Einheit wird geladen …
+        </ThemedText>
+      </ScrollView>
+    );
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <ThemedText type="title" style={styles.title}>
-        Training erstellen
+        Einheit bearbeiten
       </ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
-        Stelle eine Trainingseinheit zusammen. Die Einheit kannst du danach jederzeit über
-        „Training starten" ausführen.
+        Ändere Übungen, Sätze, Reihenfolge und Notizen. Bestehende Trainings bleiben unverändert — die
+        Änderung gilt für künftige Trainings mit dieser Einheit.
       </ThemedText>
 
       <View style={styles.field}>
@@ -123,9 +168,15 @@ export default function NewPlanScreen() {
         onPress={handleSave}>
         <ThemedView type="accent" style={styles.buttonInner}>
           <ThemedText type="smallBold" themeColor="accentText">
-            Einheit speichern
+            Änderungen speichern
           </ThemedText>
         </ThemedView>
+      </Pressable>
+
+      <Pressable style={({ pressed }) => [styles.button, pressed && styles.pressed]} onPress={() => router.back()}>
+        <ThemedText type="small" themeColor="textSecondary" style={styles.cancelText}>
+          Abbrechen
+        </ThemedText>
       </Pressable>
     </ScrollView>
   );
@@ -157,6 +208,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.three,
     borderRadius: Spacing.two,
+  },
+  cancelText: {
+    textAlign: 'center',
+    paddingVertical: Spacing.two,
   },
   pressed: {
     opacity: 0.7,

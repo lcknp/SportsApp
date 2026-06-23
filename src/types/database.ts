@@ -149,6 +149,7 @@ export type TrainingPlan = {
   user_id: string;
   name: string;
   group_id?: string | null;
+  notes?: string | null;
   created_at: string;
 };
 
@@ -161,6 +162,7 @@ export type TrainingPlanExercise = {
   weight_kg: number;
   order_index: number;
   set_entries: SetEntry[];
+  notes?: string | null;
   exercise?: Exercise;
 };
 
