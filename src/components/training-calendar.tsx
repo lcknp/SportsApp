@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dayCircle: {
-    width: '80%',
+    width: '94%',
     aspectRatio: 1,
     borderRadius: 999,
     alignItems: 'center',

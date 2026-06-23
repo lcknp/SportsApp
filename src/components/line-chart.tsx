@@ -35,10 +35,19 @@ function niceStep(range: number): number {
   return candidates.find((c) => c >= raw) ?? 10 * pow;
 }
 
+// Nachkommastellen, die der Schritt braucht (0,5 -> 1; 0,25 -> 2; 2 -> 0).
+function decimalsForStep(step: number): number {
+  for (let d = 0; d <= 2; d++) {
+    const scaled = step * 10 ** d;
+    if (Math.abs(scaled - Math.round(scaled)) < 1e-9) return d;
+  }
+  return 2;
+}
+
 // Gemeinsame Y-Skala über alle Serien + gerundete Tick-Werte.
 function computeScale(series: LineChartSeries[], baselineZero: boolean) {
   const values = series.flatMap((s) => s.values);
-  if (values.length === 0) return { min: 0, max: 1, ticks: [0, 1] };
+  if (values.length === 0) return { min: 0, max: 1, ticks: [0, 1], decimals: 0 };
 
   const dataMin = baselineZero ? 0 : Math.min(...values);
   const dataMax = Math.max(...values);
@@ -48,7 +57,7 @@ function computeScale(series: LineChartSeries[], baselineZero: boolean) {
 
   const ticks: number[] = [];
   for (let t = min; t <= max + step / 2; t += step) ticks.push(t);
-  return { min, max: max === min ? min + step : max, ticks };
+  return { min, max: max === min ? min + step : max, ticks, decimals: decimalsForStep(step) };
 }
 
 function buildPoints(values: number[], min: number, max: number) {
@@ -73,7 +82,7 @@ export function LineChart({
 }: LineChartProps) {
   const theme = useTheme();
   const hasData = series.some((s) => s.values.length > 0);
-  const { min, max, ticks } = computeScale(series, baselineZero);
+  const { min, max, ticks, decimals } = computeScale(series, baselineZero);
 
   // X-Achse: erste, mittlere und letzte Beschriftung (sonst überlappt es).
   const xLabels =
@@ -96,7 +105,7 @@ export function LineChart({
             <View style={[styles.yAxis, { width: Y_AXIS_WIDTH }]}>
               {[...ticks].reverse().map((tick) => (
                 <ThemedText key={tick} type="small" themeColor="textSecondary" style={styles.yTick}>
-                  {Math.round(tick)}
+                  {tick.toFixed(decimals)}
                 </ThemedText>
               ))}
             </View>

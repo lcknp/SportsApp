@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedTextInput } from '@/components/themed-text-input';
 import { ThemedView } from '@/components/themed-view';
+import { VolumeBars } from '@/components/volume-bars';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { usePlanGroups } from '@/hooks/use-plan-groups';
 import { useTrainingPlans } from '@/hooks/use-training-plans';
@@ -15,8 +16,13 @@ export default function VolumeScreen() {
 
   const [newGroupName, setNewGroupName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
   const ungroupedPlans = plans.filter((plan) => !plan.group_id);
+
+  function toggleGroup(groupId: string) {
+    setCollapsedGroups((current) => ({ ...current, [groupId]: !current[groupId] }));
+  }
 
   async function handleCreateGroup() {
     if (!newGroupName.trim()) return;
@@ -64,10 +70,15 @@ export default function VolumeScreen() {
       {groups.map((group) => {
         const groupPlans = plans.filter((plan) => plan.group_id === group.id);
         const groupSummary = combineVolumes(groupPlans.map(planVolume));
+        const isCollapsed = collapsedGroups[group.id];
         return (
           <ThemedView key={group.id} type="backgroundElement" style={styles.card}>
             <View style={styles.cardHeader}>
-              <ThemedText type="smallBold">{group.name}</ThemedText>
+              <Pressable style={({ pressed }) => [styles.flex1, pressed && styles.pressed]} onPress={() => toggleGroup(group.id)}>
+                <ThemedText type="smallBold">
+                  {isCollapsed ? '▸' : '▾'} {group.name} · {groupSummary.totalSets} Sätze
+                </ThemedText>
+              </Pressable>
               <Pressable style={({ pressed }) => pressed && styles.pressed} onPress={() => deleteGroup(group.id)}>
                 <ThemedText type="small" themeColor="textSecondary">
                   Gruppe löschen
@@ -75,7 +86,7 @@ export default function VolumeScreen() {
               </Pressable>
             </View>
 
-            {groupPlans.length === 0 ? (
+            {isCollapsed ? null : groupPlans.length === 0 ? (
               <ThemedText type="small" themeColor="textSecondary">
                 Noch keine Einheiten in dieser Gruppe.
               </ThemedText>
@@ -98,12 +109,7 @@ export default function VolumeScreen() {
 
                 <View style={styles.divider} />
                 <ThemedText type="smallBold">Sätze pro Muskelgruppe</ThemedText>
-                {sortedTargets(groupSummary).map(([target, sets]) => (
-                  <View key={target} style={styles.targetRow}>
-                    <ThemedText type="small">{target}</ThemedText>
-                    <ThemedText type="smallBold">{sets}</ThemedText>
-                  </View>
-                ))}
+                <VolumeBars data={sortedTargets(groupSummary)} />
                 <View style={styles.divider} />
                 <View style={styles.targetRow}>
                   <ThemedText type="smallBold">Gesamt</ThemedText>
@@ -112,7 +118,7 @@ export default function VolumeScreen() {
               </>
             )}
 
-            {ungroupedPlans.length > 0 && (
+            {!isCollapsed && ungroupedPlans.length > 0 && (
               <>
                 <ThemedText type="small" themeColor="textSecondary">
                   Einheit hinzufügen:
@@ -149,12 +155,7 @@ export default function VolumeScreen() {
               <ThemedText type="smallBold">{plan.name}</ThemedText>
               <ThemedText type="smallBold">{summary.totalSets} Sätze</ThemedText>
             </View>
-            {sortedTargets(summary).map(([target, sets]) => (
-              <View key={target} style={styles.targetRow}>
-                <ThemedText type="small">{target}</ThemedText>
-                <ThemedText type="small">{sets}</ThemedText>
-              </View>
-            ))}
+            <VolumeBars data={sortedTargets(summary)} />
           </ThemedView>
         );
       })}
