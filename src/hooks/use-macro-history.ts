@@ -6,9 +6,8 @@ import { supabase } from '@/lib/supabase';
 import type { DailyMacros } from '@/types/database';
 
 const DATE_FORMAT = 'yyyy-MM-dd';
-const HISTORY_DAYS = 14;
 
-export function useMacroHistory() {
+export function useMacroHistory(days: number = 14) {
   const { session } = useAuth();
   const userId = session?.user.id;
 
@@ -22,7 +21,7 @@ export function useMacroHistory() {
       return;
     }
     setIsLoading(true);
-    const since = format(subDays(new Date(), HISTORY_DAYS - 1), DATE_FORMAT);
+    const since = format(subDays(new Date(), days - 1), DATE_FORMAT);
     const { data, error } = await supabase
       .from('daily_macros')
       .select('*')
@@ -33,7 +32,7 @@ export function useMacroHistory() {
       setHistory(data);
     }
     setIsLoading(false);
-  }, [userId]);
+  }, [userId, days]);
 
   useEffect(() => {
     refresh();

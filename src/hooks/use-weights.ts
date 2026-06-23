@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { useCallback, useEffect, useState } from 'react';
 
 import { useAuth } from '@/contexts/auth-context';
@@ -21,12 +21,14 @@ export function useWeights() {
       return;
     }
     setIsLoading(true);
+    // Ein Jahr laden, damit auch lange Chart-Zeiträume Daten haben.
+    const since = format(subDays(new Date(), 365), DATE_FORMAT);
     const { data, error } = await supabase
       .from('weights')
       .select('*')
       .eq('user_id', userId)
-      .order('date', { ascending: false })
-      .limit(30);
+      .gte('date', since)
+      .order('date', { ascending: false });
     if (!error) {
       setWeights(data);
     }

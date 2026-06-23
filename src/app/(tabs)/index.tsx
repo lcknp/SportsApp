@@ -1,10 +1,11 @@
-import { addDays, addMonths, format, isToday } from 'date-fns';
+import { addDays, addMonths, format, isToday, subDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { ChartRangePicker } from '@/components/chart-range-picker';
 import { LineChart } from '@/components/line-chart';
 import { MacroRing } from '@/components/macro-ring';
 import { ThemedText } from '@/components/themed-text';
@@ -32,14 +33,15 @@ export default function DashboardScreen() {
   const [viewDate, setViewDate] = useState(() => new Date());
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [isMacrosCollapsed, setIsMacrosCollapsed] = useState(false);
-  const [isWeightCollapsed, setIsWeightCollapsed] = useState(false);
+  const [isWeightCollapsed, setIsWeightCollapsed] = useState(true);
+  const [chartRangeDays, setChartRangeDays] = useState(28);
 
   const { macros, saveMacros, deleteMacros, refresh: refreshMacros } = useDailyMacros(viewDate);
   const { weights, saveWeight, deleteWeight, refresh: refreshWeights } = useWeights();
   const { completedDates, refresh: refreshWorkouts } = useWorkoutSessions(calendarMonth);
   const { sessions, refresh: refreshSessions } = useTrainingSessions();
   const { runs, refresh: refreshRuns } = useRuns();
-  const { history: macroHistory, refresh: refreshMacroHistory } = useMacroHistory();
+  const { history: macroHistory, refresh: refreshMacroHistory } = useMacroHistory(chartRangeDays);
   const { steps, isAvailable: isStepCountAvailable } = useStepCount(viewDate);
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -92,7 +94,12 @@ export default function DashboardScreen() {
   const fatG = Number(fat) || 0;
   const calculatedCalories = Math.round(proteinG * 4 + carbsG * 4 + fatG * 9);
 
-  const weightHistory = weights.slice().reverse();
+  // Gewichtsverlauf nach gewähltem Zeitraum filtern (aufsteigend nach Datum).
+  const rangeCutoff = format(subDays(today, chartRangeDays - 1), DATE_FORMAT);
+  const weightHistory = weights
+    .filter((entry) => entry.date >= rangeCutoff)
+    .slice()
+    .reverse();
   const weightLabels = weightHistory.map((entry) => format(new Date(entry.date), 'd.M.', { locale: de }));
 
   const macroLabels = macroHistory.map((entry) => format(new Date(entry.date), 'd.M.', { locale: de }));
@@ -422,6 +429,8 @@ export default function DashboardScreen() {
             )}
           </ThemedView>
         )}
+
+        <ChartRangePicker value={chartRangeDays} onChange={setChartRangeDays} />
 
         <LineChart title="Gewichtsverlauf" series={[{ label: 'Gewicht (kg)', color: '#5B8DEF', values: weightHistory.map((entry) => entry.weight_kg) }]} labels={weightLabels} unit="kg" />
 
