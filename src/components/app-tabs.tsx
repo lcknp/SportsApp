@@ -25,6 +25,11 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Icon sf="figure.run" md="directions_run" />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="photo">
+        <NativeTabs.Trigger.Label>Foto</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="camera.fill" md="photo_camera" />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="profile">
         <NativeTabs.Trigger.Label>Profil</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="person.fill" md="person" />

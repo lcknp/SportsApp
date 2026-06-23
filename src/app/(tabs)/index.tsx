@@ -6,8 +6,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { LineChart } from '@/components/line-chart';
-import { MacroProgress } from '@/components/macro-progress';
-import { PhotoMacroEstimate } from '@/components/photo-macro-estimate';
+import { MacroRing } from '@/components/macro-ring';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedTextInput } from '@/components/themed-text-input';
 import { ThemedView } from '@/components/themed-view';
@@ -198,80 +197,6 @@ export default function DashboardScreen() {
         <ThemedView type="backgroundElement" style={styles.macroCard}>
           <Pressable
             style={({ pressed }) => pressed && styles.pressed}
-            onPress={() => setIsMacrosCollapsed((current) => !current)}>
-            <View style={styles.collapseHeader}>
-              <ThemedText type="smallBold">Tagesmakros</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {isMacrosCollapsed ? '▸ Aufklappen' : '▾ Einklappen'}
-              </ThemedText>
-            </View>
-          </Pressable>
-
-          {!isMacrosCollapsed && (
-            <>
-              <MacroProgress
-                label="Kalorien"
-                current={calculatedCalories}
-                goal={goals.daily_calories}
-                unit="kcal"
-              />
-              <MacroProgress label="Protein" current={proteinG} goal={goals.daily_protein_g} unit="g" />
-              <MacroProgress label="Kohlenhydrate" current={carbsG} goal={goals.daily_carbs_g} unit="g" />
-              <MacroProgress label="Fett" current={fatG} goal={goals.daily_fat_g} unit="g" />
-
-              <PhotoMacroEstimate
-                onApply={(estimatedProtein, estimatedCarbs, estimatedFat) => {
-                  setProtein(String(estimatedProtein));
-                  setCarbs(String(estimatedCarbs));
-                  setFat(String(estimatedFat));
-                  setMacroMessage('Schätzung übernommen — vor dem Speichern prüfen.');
-                }}
-              />
-
-              <View style={styles.row}>
-                <View style={[styles.field, styles.flex1]}>
-                  <ThemedText type="small">Protein (g)</ThemedText>
-                  <ThemedTextInput keyboardType="numeric" value={protein} onChangeText={setProtein} />
-                </View>
-                <View style={[styles.field, styles.flex1]}>
-                  <ThemedText type="small">Kohlenhydrate (g)</ThemedText>
-                  <ThemedTextInput keyboardType="numeric" value={carbs} onChangeText={setCarbs} />
-                </View>
-                <View style={[styles.field, styles.flex1]}>
-                  <ThemedText type="small">Fett (g)</ThemedText>
-                  <ThemedTextInput keyboardType="numeric" value={fat} onChangeText={setFat} />
-                </View>
-              </View>
-
-              {macroMessage && <ThemedText type="small">{macroMessage}</ThemedText>}
-
-              <View style={styles.row}>
-                <Pressable
-                  style={({ pressed }) => [styles.saveButton, styles.flex1, pressed && styles.pressed]}
-                  disabled={isSavingMacros}
-                  onPress={handleSaveMacros}>
-                  <ThemedView type="accent" style={styles.saveButtonInner}>
-                    <ThemedText type="smallBold" themeColor="accentText">
-                      Makros speichern
-                    </ThemedText>
-                  </ThemedView>
-                </Pressable>
-                <Pressable
-                  style={({ pressed }) => [styles.saveButton, styles.flex1, pressed && styles.pressed]}
-                  disabled={isSavingMacros}
-                  onPress={handleDeleteMacros}>
-                  <ThemedView type="backgroundSelected" style={styles.saveButtonInner}>
-                    <ThemedText type="smallBold">Löschen</ThemedText>
-                  </ThemedView>
-                </Pressable>
-              </View>
-            </>
-          )}
-        </ThemedView>
-
-        <ThemedView type="backgroundElement" style={styles.macroCard}>
-          <Pressable
-            style={({ pressed }) => pressed && styles.pressed}
             onPress={() => setIsWeightCollapsed((current) => !current)}>
             <View style={styles.collapseHeader}>
               <ThemedText type="smallBold">Gewicht</ThemedText>
@@ -324,6 +249,86 @@ export default function DashboardScreen() {
                   ))}
                 </View>
               )}
+            </>
+          )}
+        </ThemedView>
+
+        <ThemedView type="backgroundElement" style={styles.macroCard}>
+          <Pressable
+            style={({ pressed }) => pressed && styles.pressed}
+            onPress={() => setIsMacrosCollapsed((current) => !current)}>
+            <View style={styles.collapseHeader}>
+              <ThemedText type="smallBold">Tagesmakros</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {isMacrosCollapsed ? '▸ Aufklappen' : '▾ Einklappen'}
+              </ThemedText>
+            </View>
+          </Pressable>
+
+          {!isMacrosCollapsed && (
+            <>
+              <View style={styles.ringRow}>
+                <MacroRing
+                  label="Kalorien"
+                  current={calculatedCalories}
+                  goal={goals.daily_calories}
+                  unit="kcal"
+                  color="#5B8DEF"
+                />
+                <MacroRing
+                  label="Protein"
+                  current={proteinG}
+                  goal={goals.daily_protein_g}
+                  unit="g"
+                  color="#22A06B"
+                />
+                <MacroRing
+                  label="KH"
+                  current={carbsG}
+                  goal={goals.daily_carbs_g}
+                  unit="g"
+                  color="#E5A93B"
+                />
+                <MacroRing label="Fett" current={fatG} goal={goals.daily_fat_g} unit="g" color="#E5484D" />
+              </View>
+
+              <View style={styles.row}>
+                <View style={[styles.field, styles.flex1]}>
+                  <ThemedText type="small">Protein (g)</ThemedText>
+                  <ThemedTextInput keyboardType="numeric" value={protein} onChangeText={setProtein} />
+                </View>
+                <View style={[styles.field, styles.flex1]}>
+                  <ThemedText type="small">Kohlenhydrate (g)</ThemedText>
+                  <ThemedTextInput keyboardType="numeric" value={carbs} onChangeText={setCarbs} />
+                </View>
+                <View style={[styles.field, styles.flex1]}>
+                  <ThemedText type="small">Fett (g)</ThemedText>
+                  <ThemedTextInput keyboardType="numeric" value={fat} onChangeText={setFat} />
+                </View>
+              </View>
+
+              {macroMessage && <ThemedText type="small">{macroMessage}</ThemedText>}
+
+              <View style={styles.row}>
+                <Pressable
+                  style={({ pressed }) => [styles.saveButton, styles.flex1, pressed && styles.pressed]}
+                  disabled={isSavingMacros}
+                  onPress={handleSaveMacros}>
+                  <ThemedView type="accent" style={styles.saveButtonInner}>
+                    <ThemedText type="smallBold" themeColor="accentText">
+                      Makros speichern
+                    </ThemedText>
+                  </ThemedView>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [styles.saveButton, styles.flex1, pressed && styles.pressed]}
+                  disabled={isSavingMacros}
+                  onPress={handleDeleteMacros}>
+                  <ThemedView type="backgroundSelected" style={styles.saveButtonInner}>
+                    <ThemedText type="smallBold">Löschen</ThemedText>
+                  </ThemedView>
+                </Pressable>
+              </View>
             </>
           )}
         </ThemedView>
@@ -468,6 +473,12 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     gap: Spacing.two,
+  },
+  ringRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-around',
+    rowGap: Spacing.three,
   },
   saveButton: {
     borderRadius: Spacing.two,
