@@ -34,6 +34,7 @@ export default function EditPlanScreen() {
   const [exercises, setExercises] = useState<EditableExercise[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [replacingIndex, setReplacingIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -59,6 +60,25 @@ export default function EditPlanScreen() {
   }, [plan, isInitialized]);
 
   function handleSelectExercise(exercise: Exercise) {
+    // Ersetzen-Modus: nur die Übung tauschen, Sätze/Notiz/Position behalten.
+    if (replacingIndex !== null) {
+      setExercises((current) =>
+        current.map((item, i) =>
+          i === replacingIndex
+            ? {
+                ...item,
+                exercise_id: exercise.id,
+                name: exercise.name,
+                video_url: exercise.video_url,
+                target: exercise.target,
+              }
+            : item,
+        ),
+      );
+      setReplacingIndex(null);
+      setIsPickerOpen(false);
+      return;
+    }
     setExercises((current) => [
       ...current,
       {
@@ -142,11 +162,22 @@ export default function EditPlanScreen() {
         />
       </View>
 
-      <ExerciseSetList exercises={exercises} onChange={setExercises} showNotes />
+      <ExerciseSetList
+        exercises={exercises}
+        onChange={setExercises}
+        showNotes
+        onReplaceExercise={(index) => {
+          setReplacingIndex(index);
+          setIsPickerOpen(true);
+        }}
+      />
 
       <Pressable
         style={({ pressed }) => [styles.button, pressed && styles.pressed]}
-        onPress={() => setIsPickerOpen((current) => !current)}>
+        onPress={() => {
+          setReplacingIndex(null);
+          setIsPickerOpen((current) => !current);
+        }}>
         <ThemedView type="accent" style={styles.buttonInner}>
           <ThemedText type="smallBold" themeColor="accentText">
             {isPickerOpen ? '− Übung hinzufügen' : '+ Übung hinzufügen'}
@@ -154,7 +185,16 @@ export default function EditPlanScreen() {
         </ThemedView>
       </Pressable>
 
-      {isPickerOpen && <ExercisePicker onSelect={handleSelectExercise} />}
+      {isPickerOpen && (
+        <>
+          {replacingIndex !== null && (
+            <ThemedText type="small" themeColor="textSecondary">
+              Übung zum Ersetzen auswählen …
+            </ThemedText>
+          )}
+          <ExercisePicker onSelect={handleSelectExercise} />
+        </>
+      )}
 
       {error && (
         <ThemedText type="small" style={styles.error}>

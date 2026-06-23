@@ -25,9 +25,16 @@ type ExerciseSetListProps = {
   onChange: (exercises: EditableExercise[]) => void;
   /** Notiz-Feld pro Übung anzeigen (z.B. beim Bearbeiten einer Einheit). */
   showNotes?: boolean;
+  /** „Ersetzen"-Button pro Übung anzeigen — tauscht nur die Übung, behält Sätze/Notiz. */
+  onReplaceExercise?: (index: number) => void;
 };
 
-export function ExerciseSetList({ exercises, onChange, showNotes = false }: ExerciseSetListProps) {
+export function ExerciseSetList({
+  exercises,
+  onChange,
+  showNotes = false,
+  onReplaceExercise,
+}: ExerciseSetListProps) {
   function moveExercise(exerciseIndex: number, direction: -1 | 1) {
     const target = exerciseIndex + direction;
     if (target < 0 || target >= exercises.length) return;
@@ -110,6 +117,15 @@ export function ExerciseSetList({ exercises, onChange, showNotes = false }: Exer
                   ↓
                 </ThemedText>
               </Pressable>
+              {onReplaceExercise ? (
+                <Pressable
+                  style={({ pressed }) => pressed && styles.pressed}
+                  onPress={() => onReplaceExercise(exerciseIndex)}>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Ersetzen
+                  </ThemedText>
+                </Pressable>
+              ) : null}
               <Pressable
                 style={({ pressed }) => pressed && styles.pressed}
                 onPress={() => removeExercise(exerciseIndex)}>
