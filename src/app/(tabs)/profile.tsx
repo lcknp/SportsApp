@@ -10,6 +10,7 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/contexts/auth-context';
 import { useThemePreference, type ThemePreference } from '@/contexts/theme-context';
 import { useProfile } from '@/hooks/use-profile';
+import { parseDecimal } from '@/lib/numbers';
 
 type Tab = 'settings' | 'goals';
 
@@ -94,10 +95,10 @@ export default function ProfileScreen() {
     setGoalsMessage(null);
     setIsSavingGoals(true);
     const error = await updateGoals({
-      daily_calories: Number(calories) || 0,
-      daily_protein_g: Number(protein) || 0,
-      daily_carbs_g: Number(carbs) || 0,
-      daily_fat_g: Number(fat) || 0,
+      daily_calories: parseDecimal(calories),
+      daily_protein_g: parseDecimal(protein),
+      daily_carbs_g: parseDecimal(carbs),
+      daily_fat_g: parseDecimal(fat),
     });
     setIsSavingGoals(false);
     setGoalsMessage(error ?? 'Ziele gespeichert.');
@@ -217,22 +218,22 @@ export default function ProfileScreen() {
 
           <View style={styles.field}>
             <ThemedText type="small">Kalorien (kcal)</ThemedText>
-            <ThemedTextInput keyboardType="numeric" value={calories} onChangeText={setCalories} />
+            <ThemedTextInput keyboardType="decimal-pad" value={calories} onChangeText={setCalories} />
           </View>
 
           <View style={styles.field}>
             <ThemedText type="small">Protein (g)</ThemedText>
-            <ThemedTextInput keyboardType="numeric" value={protein} onChangeText={setProtein} />
+            <ThemedTextInput keyboardType="decimal-pad" value={protein} onChangeText={setProtein} />
           </View>
 
           <View style={styles.field}>
             <ThemedText type="small">Kohlenhydrate (g)</ThemedText>
-            <ThemedTextInput keyboardType="numeric" value={carbs} onChangeText={setCarbs} />
+            <ThemedTextInput keyboardType="decimal-pad" value={carbs} onChangeText={setCarbs} />
           </View>
 
           <View style={styles.field}>
             <ThemedText type="small">Fett (g)</ThemedText>
-            <ThemedTextInput keyboardType="numeric" value={fat} onChangeText={setFat} />
+            <ThemedTextInput keyboardType="decimal-pad" value={fat} onChangeText={setFat} />
           </View>
 
           {goalsMessage && <ThemedText type="small">{goalsMessage}</ThemedText>}

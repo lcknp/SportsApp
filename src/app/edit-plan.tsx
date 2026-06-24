@@ -14,6 +14,7 @@ import { ThemedTextInput } from '@/components/themed-text-input';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTrainingPlans } from '@/hooks/use-training-plans';
+import { parseDecimal } from '@/lib/numbers';
 import type { Exercise, SetEntry } from '@/types/database';
 
 function toDraftSets(entries: SetEntry[]): DraftSet[] {
@@ -111,8 +112,8 @@ export default function EditPlanScreen() {
         notes: exercise.notes ?? null,
         set_entries: exercise.sets.map(
           (set): SetEntry => ({
-            reps: Number(set.reps) || 0,
-            weight_kg: Number(set.weight_kg) || 0,
+            reps: parseDecimal(set.reps),
+            weight_kg: parseDecimal(set.weight_kg),
           }),
         ),
       })),

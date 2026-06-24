@@ -10,6 +10,7 @@ import { ThemedTextInput } from '@/components/themed-text-input';
 import { ThemedView } from '@/components/themed-view';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { groupByMonth } from '@/lib/month-groups';
+import { parseDecimal } from '@/lib/numbers';
 import { useTrainingPlans } from '@/hooks/use-training-plans';
 import { useTrainingSessions } from '@/hooks/use-training-sessions';
 
@@ -39,7 +40,7 @@ export default function TrainingScreen() {
 
   async function handleSaveEdit() {
     if (!editingId) return;
-    await updateSession(editingId, editDate, editDuration.trim() ? Number(editDuration) : null);
+    await updateSession(editingId, editDate, editDuration.trim() ? parseDecimal(editDuration) : null);
     setEditingId(null);
   }
 
@@ -237,7 +238,7 @@ export default function TrainingScreen() {
                             <View style={styles.field}>
                               <ThemedText type="small">Dauer (Minuten)</ThemedText>
                               <ThemedTextInput
-                                keyboardType="numeric"
+                                keyboardType="decimal-pad"
                                 value={editDuration}
                                 onChangeText={setEditDuration}
                               />

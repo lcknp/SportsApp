@@ -22,6 +22,7 @@ import { useStepCount } from '@/hooks/use-step-count';
 import { useTrainingSessions } from '@/hooks/use-training-sessions';
 import { useWeights } from '@/hooks/use-weights';
 import { useWorkoutSessions } from '@/hooks/use-workout-sessions';
+import { parseDecimal } from '@/lib/numbers';
 
 const DATE_FORMAT = 'yyyy-MM-dd';
 
@@ -89,9 +90,9 @@ export default function DashboardScreen() {
     daily_fat_g: 70,
   };
 
-  const proteinG = Number(protein) || 0;
-  const carbsG = Number(carbs) || 0;
-  const fatG = Number(fat) || 0;
+  const proteinG = parseDecimal(protein);
+  const carbsG = parseDecimal(carbs);
+  const fatG = parseDecimal(fat);
   const calculatedCalories = Math.round(proteinG * 4 + carbsG * 4 + fatG * 9);
 
   // Gewichtsverlauf nach gewähltem Zeitraum filtern (aufsteigend nach Datum).
@@ -156,7 +157,7 @@ export default function DashboardScreen() {
   }
 
   async function handleSaveWeight() {
-    const weightKg = Number(weight);
+    const weightKg = parseDecimal(weight);
     if (!weightKg || weightKg <= 0) {
       setWeightMessage('Bitte ein gültiges Gewicht eingeben.');
       return;
@@ -218,7 +219,7 @@ export default function DashboardScreen() {
               <View style={styles.row}>
                 <View style={[styles.field, styles.flex1]}>
                   <ThemedText type="small">Gewicht (kg)</ThemedText>
-                  <ThemedTextInput keyboardType="numeric" value={weight} onChangeText={setWeight} />
+                  <ThemedTextInput keyboardType="decimal-pad" value={weight} onChangeText={setWeight} />
                 </View>
               </View>
 
@@ -302,15 +303,15 @@ export default function DashboardScreen() {
               <View style={styles.row}>
                 <View style={[styles.field, styles.flex1]}>
                   <ThemedText type="small">Protein (g)</ThemedText>
-                  <ThemedTextInput keyboardType="numeric" value={protein} onChangeText={setProtein} />
+                  <ThemedTextInput keyboardType="decimal-pad" value={protein} onChangeText={setProtein} />
                 </View>
                 <View style={[styles.field, styles.flex1]}>
                   <ThemedText type="small">Kohlenhydrate (g)</ThemedText>
-                  <ThemedTextInput keyboardType="numeric" value={carbs} onChangeText={setCarbs} />
+                  <ThemedTextInput keyboardType="decimal-pad" value={carbs} onChangeText={setCarbs} />
                 </View>
                 <View style={[styles.field, styles.flex1]}>
                   <ThemedText type="small">Fett (g)</ThemedText>
-                  <ThemedTextInput keyboardType="numeric" value={fat} onChangeText={setFat} />
+                  <ThemedTextInput keyboardType="decimal-pad" value={fat} onChangeText={setFat} />
                 </View>
               </View>
 

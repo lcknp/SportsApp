@@ -144,7 +144,7 @@ export function ExerciseSetList({
               <View style={[styles.field, styles.flex1]}>
                 <ThemedText type="small">kg</ThemedText>
                 <ThemedTextInput
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   value={set.weight_kg}
                   onChangeText={(value) => updateSetField(exerciseIndex, setIndex, 'weight_kg', value)}
                 />
@@ -152,7 +152,7 @@ export function ExerciseSetList({
               <View style={[styles.field, styles.flex1]}>
                 <ThemedText type="small">Wdh.</ThemedText>
                 <ThemedTextInput
-                  keyboardType="numeric"
+                  keyboardType="decimal-pad"
                   value={set.reps}
                   onChangeText={(value) => updateSetField(exerciseIndex, setIndex, 'reps', value)}
                 />

@@ -8,6 +8,7 @@ import { ThemedTextInput } from '@/components/themed-text-input';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useRuns } from '@/hooks/use-runs';
+import { parseDecimal } from '@/lib/numbers';
 
 function formatPace(distanceKm: number, durationMinutes: number) {
   if (distanceKm <= 0) return '–';
@@ -26,8 +27,8 @@ export default function NewRunScreen() {
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  const distanceKm = Number(distance) || 0;
-  const durationMinutes = Number(duration) || 0;
+  const distanceKm = parseDecimal(distance);
+  const durationMinutes = parseDecimal(duration);
 
   async function handleSave() {
     if (distanceKm <= 0 || durationMinutes <= 0) {
@@ -56,11 +57,11 @@ export default function NewRunScreen() {
       <View style={styles.row}>
         <View style={[styles.field, styles.flex1]}>
           <ThemedText type="small">Distanz (km)</ThemedText>
-          <ThemedTextInput keyboardType="numeric" value={distance} onChangeText={setDistance} />
+          <ThemedTextInput keyboardType="decimal-pad" value={distance} onChangeText={setDistance} />
         </View>
         <View style={[styles.field, styles.flex1]}>
           <ThemedText type="small">Dauer (min)</ThemedText>
-          <ThemedTextInput keyboardType="numeric" value={duration} onChangeText={setDuration} />
+          <ThemedTextInput keyboardType="decimal-pad" value={duration} onChangeText={setDuration} />
         </View>
       </View>
 
