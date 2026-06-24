@@ -33,17 +33,34 @@ export function useExercises() {
     refresh();
   }, [refresh]);
 
-  async function addExercise(name: string, category: ExerciseCategory) {
+  async function addExercise(name: string, category: ExerciseCategory, target?: string | null) {
     if (!userId) return { exercise: null, error: 'Nicht angemeldet' };
     const { data, error } = await supabase
       .from('exercises')
-      .insert({ name, category, user_id: userId })
+      .insert({ name, category, target: target?.trim() || null, user_id: userId })
       .select()
       .single();
     if (!error) {
       await refresh();
     }
     return { exercise: data as Exercise | null, error: error?.message ?? null };
+  }
+
+  // Aktualisiert eine selbst erstellte Übung (RLS lässt globale Übungen nicht zu).
+  // target = Muskelgruppe(n), mehrere kommagetrennt; null entfernt sie (Fallback: category).
+  async function updateExercise(
+    id: string,
+    updates: { name?: string; category?: ExerciseCategory; target?: string | null },
+  ) {
+    if (!userId) return 'Nicht angemeldet';
+    const payload: Record<string, unknown> = {};
+    if (updates.name !== undefined) payload.name = updates.name;
+    if (updates.category !== undefined) payload.category = updates.category;
+    if (updates.target !== undefined) payload.target = updates.target?.trim() || null;
+    const { error } = await supabase.from('exercises').update(payload).eq('id', id);
+    if (error) return error.message;
+    await refresh();
+    return null;
   }
 
   // Caution: session_exercises/training_plan_exercises cascade on delete,
@@ -56,5 +73,5 @@ export function useExercises() {
     return null;
   }
 
-  return { exercises, isLoading, addExercise, deleteExercise, refresh };
+  return { exercises, isLoading, addExercise, updateExercise, deleteExercise, refresh };
 }

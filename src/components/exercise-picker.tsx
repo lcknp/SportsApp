@@ -14,36 +14,64 @@ type ExercisePickerProps = {
   onSelect: (exercise: Exercise) => void;
 };
 
-export function ExercisePicker({ onSelect }: ExercisePickerProps) {
-  const { exercises, addExercise, deleteExercise } = useExercises();
+// Muskelgruppe(n) einer Übung: target (kommagetrennt) mit Fallback auf die grobe Kategorie.
+function muscleGroupsOf(exercise: Exercise): string[] {
+  const text = exercise.target?.trim() || exercise.category || 'Sonstiges';
+  return text
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
 
-  const [categoryFilter, setCategoryFilter] = useState<ExerciseCategory | null>(null);
+export function ExercisePicker({ onSelect }: ExercisePickerProps) {
+  const { exercises, addExercise, updateExercise, deleteExercise } = useExercises();
+
+  const [groupFilter, setGroupFilter] = useState<string | null>(null);
   const [showNewExerciseForm, setShowNewExerciseForm] = useState(false);
   const [newExerciseName, setNewExerciseName] = useState('');
   const [newExerciseCategory, setNewExerciseCategory] = useState<ExerciseCategory>(
     EXERCISE_CATEGORIES[0],
   );
+  const [newExerciseTarget, setNewExerciseTarget] = useState('');
   const [isManaging, setIsManaging] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [isEditingGroups, setIsEditingGroups] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editGroupText, setEditGroupText] = useState('');
   const [searchText, setSearchText] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  // Die tatsächlich vergebenen Muskelgruppen als Filter (statt der groben Kategorien).
+  const muscleGroups = useMemo(() => {
+    const set = new Set<string>();
+    for (const exercise of exercises) {
+      for (const group of muscleGroupsOf(exercise)) set.add(group);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'de'));
+  }, [exercises]);
+
   const filteredExercises = useMemo(() => {
-    let list = categoryFilter
-      ? exercises.filter((exercise) => exercise.category === categoryFilter)
+    let list = groupFilter
+      ? exercises.filter((exercise) => muscleGroupsOf(exercise).includes(groupFilter))
       : exercises;
     const query = searchText.trim().toLowerCase();
     if (query) {
       list = list.filter((exercise) => exercise.name.toLowerCase().includes(query));
     }
-    // Im Verwalten-Modus nur eigene Übungen — Standard-Übungen sind nicht löschbar.
-    if (isManaging) {
+    // Im Verwalten-/Bearbeiten-Modus nur eigene Übungen — Standard-Übungen sind gesperrt.
+    if (isManaging || isEditingGroups) {
       list = list.filter((exercise) => exercise.user_id !== null);
     }
     return list;
-  }, [exercises, categoryFilter, searchText, isManaging]);
+  }, [exercises, groupFilter, searchText, isManaging, isEditingGroups]);
 
   async function handleChipPress(exercise: Exercise) {
+    if (isEditingGroups) {
+      setEditingId(exercise.id);
+      setEditGroupText(exercise.target?.trim() ?? '');
+      setError(null);
+      return;
+    }
     if (!isManaging) {
       onSelect(exercise);
       return;
@@ -58,12 +86,25 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
     if (message) setError(message);
   }
 
+  async function handleSaveGroup() {
+    if (!editingId) return;
+    setError(null);
+    const message = await updateExercise(editingId, { target: editGroupText.trim() || null });
+    if (message) {
+      setError(message);
+      return;
+    }
+    setEditingId(null);
+    setEditGroupText('');
+  }
+
   async function handleCreateExercise() {
     if (!newExerciseName.trim()) return;
     setError(null);
     const { exercise, error: createError } = await addExercise(
       newExerciseName.trim(),
       newExerciseCategory,
+      newExerciseTarget,
     );
     if (createError) {
       setError(createError);
@@ -72,6 +113,7 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
     if (exercise) {
       setShowNewExerciseForm(false);
       setNewExerciseName('');
+      setNewExerciseTarget('');
       onSelect(exercise);
     }
   }
@@ -96,13 +138,13 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
       <ThemedTextInput placeholder="Übung suchen …" value={searchText} onChangeText={setSearchText} />
 
       <View style={styles.chipRow}>
-        <Chip label="Alle" selected={categoryFilter === null} onPress={() => setCategoryFilter(null)} />
-        {EXERCISE_CATEGORIES.map((category) => (
+        <Chip label="Alle" selected={groupFilter === null} onPress={() => setGroupFilter(null)} />
+        {muscleGroups.map((group) => (
           <Chip
-            key={category}
-            label={category}
-            selected={categoryFilter === category}
-            onPress={() => setCategoryFilter(category)}
+            key={group}
+            label={group}
+            selected={groupFilter === group}
+            onPress={() => setGroupFilter(group)}
           />
         ))}
       </View>
@@ -116,9 +158,12 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
                 ? pendingDeleteId === exercise.id
                   ? `Wirklich löschen: ${exercise.name}?`
                   : `✕ ${exercise.name}`
-                : exercise.name
+                : isEditingGroups
+                  ? `${exercise.name} · ${muscleGroupsOf(exercise).join(', ')}`
+                  : exercise.name
             }
             danger={isManaging && pendingDeleteId === exercise.id}
+            selected={isEditingGroups && editingId === exercise.id}
             onPress={() => handleChipPress(exercise)}
           />
         ))}
@@ -128,10 +173,23 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
           onPress={() => setShowNewExerciseForm((current) => !current)}
         />
         <Chip
+          label={isEditingGroups ? 'Fertig' : 'Muskelgruppe bearbeiten'}
+          selected={isEditingGroups}
+          onPress={() => {
+            setIsEditingGroups((current) => !current);
+            setIsManaging(false);
+            setPendingDeleteId(null);
+            setEditingId(null);
+            setEditGroupText('');
+          }}
+        />
+        <Chip
           label={isManaging ? 'Fertig' : 'Übungen löschen'}
           selected={isManaging}
           onPress={() => {
             setIsManaging((current) => !current);
+            setIsEditingGroups(false);
+            setEditingId(null);
             setPendingDeleteId(null);
           }}
         />
@@ -143,6 +201,33 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
           löschen. Tippe eine Übung an und bestätige mit einem zweiten Tipp. Achtung: Die Übung
           wird dabei auch aus gespeicherten Trainings und Einheiten entfernt.
         </ThemedText>
+      )}
+
+      {isEditingGroups && (
+        <ThemedText type="small" themeColor="textSecondary">
+          Nur selbst erstellte Übungen lassen sich anpassen. Tippe eine Übung an und ändere ihre
+          Muskelgruppe — mehrere mit Komma trennen (z.B. „HAMS, LOWER BACK").
+        </ThemedText>
+      )}
+
+      {isEditingGroups && editingId && (
+        <View style={styles.field}>
+          <ThemedText type="small" themeColor="textSecondary">
+            Muskelgruppe für „{exercises.find((exercise) => exercise.id === editingId)?.name}"
+          </ThemedText>
+          <ThemedTextInput
+            placeholder="z.B. Sidedelt, Frontdelt, Adductors …"
+            value={editGroupText}
+            onChangeText={setEditGroupText}
+          />
+          <Pressable style={({ pressed }) => [styles.button, pressed && styles.pressed]} onPress={handleSaveGroup}>
+            <ThemedView type="accent" style={styles.buttonInner}>
+              <ThemedText type="smallBold" themeColor="accentText">
+                Muskelgruppe speichern
+              </ThemedText>
+            </ThemedView>
+          </Pressable>
+        </View>
       )}
 
       {showNewExerciseForm && (
@@ -162,6 +247,11 @@ export function ExercisePicker({ onSelect }: ExercisePickerProps) {
               />
             ))}
           </View>
+          <ThemedTextInput
+            placeholder="Muskelgruppe (optional, z.B. Sidedelt) — sonst Kategorie"
+            value={newExerciseTarget}
+            onChangeText={setNewExerciseTarget}
+          />
           <Pressable style={({ pressed }) => [styles.button, pressed && styles.pressed]} onPress={handleCreateExercise}>
             <ThemedView type="accent" style={styles.buttonInner}>
               <ThemedText type="smallBold" themeColor="accentText">
