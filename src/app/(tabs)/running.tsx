@@ -14,7 +14,7 @@ import { useRuns } from '@/hooks/use-runs';
 import { useStrava } from '@/hooks/use-strava';
 import { useTheme } from '@/hooks/use-theme';
 import { groupByMonth } from '@/lib/month-groups';
-import type { Run, StravaDetail } from '@/types/database';
+import type { Run, StravaDetail, StravaStats } from '@/types/database';
 
 function formatPace(distanceKm: number, durationMinutes: number) {
   if (distanceKm <= 0) return '–';
@@ -76,14 +76,16 @@ function RouteMap({ points, color }: { points: [number, number][]; color: string
 export default function RunningScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
-  const { runs, deleteRun, refresh } = useRuns();
+  const { runs, deleteRun, refresh, fetchRunDetails } = useRuns();
   const { isConfigured, isConnected, isSyncing, connect, sync, fetchActivityDetail, disconnect } = useStrava();
 
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const autoSyncedRef = useRef(false);
 
-  // Aufgeklappter Lauf + lazy geladene Detaildaten (pro Lauf)
+  // Aufgeklappter Lauf + lazy geladene Detaildaten (pro Lauf). Die schweren
+  // Spalten (stats/detail) werden erst hier geladen, nicht schon in der Liste.
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [statsCache, setStatsCache] = useState<Record<string, StravaStats | null>>({});
   const [details, setDetails] = useState<Record<string, StravaDetail>>({});
   const [detailLoadingId, setDetailLoadingId] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -96,19 +98,30 @@ export default function RunningScreen() {
     setExpandedId(run.id);
     setDetailError(null);
 
-    // Schon vorhanden (Server-Cache oder zuvor geladen) oder kein Strava-Lauf? Nichts laden.
-    const alreadyHave = run.strava_detail ?? details[run.id];
-    if (!run.strava_id || alreadyHave) return;
+    let detail: StravaDetail | null = details[run.id] ?? null;
 
-    setDetailLoadingId(run.id);
-    const result = await fetchActivityDetail(run.id);
-    setDetailLoadingId((current) => (current === run.id ? null : current));
-    if (result.error) {
-      setDetailError(result.error);
-      return;
+    // Schwere Spalten (Stats + ggf. gecachte Details) einmalig pro Lauf nachladen.
+    if (!(run.id in statsCache)) {
+      const heavy = await fetchRunDetails(run.id);
+      setStatsCache((current) => ({ ...current, [run.id]: heavy.stats }));
+      if (heavy.detail) {
+        detail = heavy.detail;
+        setDetails((current) => ({ ...current, [run.id]: heavy.detail! }));
+      }
     }
-    if (result.detail) {
-      setDetails((current) => ({ ...current, [run.id]: result.detail! }));
+
+    // Strava-Lauf, dessen Details noch nicht gecacht sind → einmal von Strava holen.
+    if (!detail && run.strava_id) {
+      setDetailLoadingId(run.id);
+      const result = await fetchActivityDetail(run.id);
+      setDetailLoadingId((current) => (current === run.id ? null : current));
+      if (result.error) {
+        setDetailError(result.error);
+        return;
+      }
+      if (result.detail) {
+        setDetails((current) => ({ ...current, [run.id]: result.detail! }));
+      }
     }
   }
 
@@ -271,8 +284,8 @@ export default function RunningScreen() {
 
             {group.items.map((run) => {
               const isExpanded = expandedId === run.id;
-              const stats = run.strava_stats;
-              const detail = run.strava_detail ?? details[run.id];
+              const stats = statsCache[run.id] ?? null;
+              const detail = details[run.id];
 
               const tiles: { label: string; value: string }[] = [];
               const startTime = formatStartTime(stats?.started_at);

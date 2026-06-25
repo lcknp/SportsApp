@@ -3,9 +3,14 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { useAuth } from '@/contexts/auth-context';
 import { supabase } from '@/lib/supabase';
-import type { Run } from '@/types/database';
+import type { Run, StravaDetail, StravaStats } from '@/types/database';
 
 const DATE_FORMAT = 'yyyy-MM-dd';
+
+// Leichte Spalten für die Liste — OHNE die großen JSON-Felder strava_stats
+// (Polyline) und strava_detail (Streams). Die werden erst beim Aufklappen
+// eines Laufs einzeln nachgeladen, sonst lädt jeder Tab-Fokus Megabytes.
+const RUN_LIST_COLUMNS = 'id, user_id, date, distance_km, duration_minutes, strava_id, created_at';
 
 export function useRuns() {
   const { session } = useAuth();
@@ -23,14 +28,27 @@ export function useRuns() {
     setIsLoading(true);
     const { data, error } = await supabase
       .from('runs')
-      .select('*')
+      .select(RUN_LIST_COLUMNS)
       .eq('user_id', userId)
       .order('date', { ascending: false });
     if (!error) {
-      setRuns(data);
+      setRuns(data as Run[]);
     }
     setIsLoading(false);
   }, [userId]);
+
+  // Schwere Detail-Spalten für genau einen Lauf (beim Aufklappen). strava_stats
+  // ist nach dem Sync immer da; strava_detail nur, wenn es zuvor gecacht wurde.
+  async function fetchRunDetails(
+    runId: string,
+  ): Promise<{ stats: StravaStats | null; detail: StravaDetail | null }> {
+    const { data } = await supabase
+      .from('runs')
+      .select('strava_stats, strava_detail')
+      .eq('id', runId)
+      .maybeSingle();
+    return { stats: data?.strava_stats ?? null, detail: data?.strava_detail ?? null };
+  }
 
   useEffect(() => {
     refresh();
@@ -74,5 +92,5 @@ export function useRuns() {
     return null;
   }
 
-  return { runs, isLoading, addRun, deleteRun, refresh };
+  return { runs, isLoading, addRun, deleteRun, refresh, fetchRunDetails };
 }
